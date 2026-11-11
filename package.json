@@ -1,0 +1,43 @@
+{
+  "name": "leonida-agents",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 4083",
+    "build": "next build",
+    "start": "next start -p 4083",
+    "db:push": "drizzle-kit push",
+    "db:local": "tsx scripts/localdb.mts",
+    "agents": "tsx worker/loop.mts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.10",
+    "@electric-sql/pglite-socket": "^0.2.13",
+    "@neondatabase/serverless": "^1.0.0",
+    "@react-three/fiber": "^9.8.2",
+    "@react-three/postprocessing": "^3.2.2",
+    "@types/three": "^0.187.0",
+    "@vercel/blob": "^2.8.2",
+    "3d-tiles-renderer": "^0.5.4",
+    "drizzle-orm": "^0.44.0",
+    "eslint-config-next": "16.4.3",
+    "ffmpeg-static": "^5.2.0",
+    "next": "16.4.3",
+    "postgres": "^3.4.9",
+    "postprocessing": "^6.39.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "three": "^0.187.0",
+    "tsx": "^4.20.0",
+    "viem": "^2.38.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19.3.0",
+    "drizzle-kit": "^0.31.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5"
+  }
+}
