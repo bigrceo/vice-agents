@@ -5,6 +5,8 @@ export type Coin = {
   mcapUsd: number; change24h: number; volumeEth: number; holders: number; bondingPct: number;
   migrated: boolean; createdAt: string; official?: boolean;
   mapU?: number | null; mapV?: number | null;
+  /** agents only: ring colour and the line they just said or traded */
+  ring?: string; bubble?: { id: number; kind: string; text: string } | null;
 };
 export type Trade = { sig: string; mint: string; ticker: string; wallet: string; side: "buy" | "sell"; eth: number; tokens: number; mcapUsd: number; at: string };
 export type Holder = { wallet: string; amount: number; pct: number; dev?: boolean; curve?: boolean };

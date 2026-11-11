@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import type { AgentView, Town } from "@/lib/agents/data";
+import type { AgentView, Town, TownEvent } from "@/lib/agents/data";
 import type { Coin } from "@/lib/types";
 
 const Ctx = createContext<Town | null>(null);
@@ -22,10 +22,13 @@ export const avatar = (id: string) => `/api/agents/${id}/avatar`;
 export const first = (n: string) => n.replace(/^(Officer|Doc|Big) /, "").split(" ")[0];
 
 /** The map draws "coins": each agent is one, standing where it walks. */
-export function agentAsCoin(a: AgentView): Coin {
+export function agentAsCoin(a: AgentView, events: TownEvent[] = []): Coin {
+  const e = events.find((x) => x.agent === a.id && x.kind !== "move" && Date.now() - +new Date(x.at) < 45_000);
+  const cut = (t: string) => (t.length > 120 ? t.slice(0, 117).replace(/\s+\S*$/, "") + "…" : t);
+  const bubble = e ? { id: e.id, kind: e.kind, text: e.kind === "say" ? `“${cut(e.text)}”` : cut(e.text) } : null;
   return { mint: a.id, curve: "agent", name: a.name, ticker: first(a.name), still: avatar(a.id), creator: a.address,
     mcapUsd: a.equity * 1e6, change24h: Math.round(a.pnlPct * 10) / 10, volumeEth: 0, holders: 0, bondingPct: 0, migrated: false,
-    createdAt: new Date().toISOString(), mapU: a.u, mapV: a.v, description: a.thought };
+    createdAt: new Date().toISOString(), mapU: a.u, mapV: a.v, description: a.thought, ring: a.color, bubble };
 }
 export const eth = (n: number) => `${n >= 0.1 ? n.toFixed(3) : n.toFixed(4)} ETH`;
 export const signed = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(2)}%`;

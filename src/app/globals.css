@@ -299,3 +299,24 @@ nav#nav.slim .mcards { display: none; }
 /* agents rail: new lines slide in */
 .feed-in { animation: feed-in .5s ease-out both; }
 @keyframes feed-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* agents on the map: coloured ring that breathes, a speech bubble that pops over the pin and fades */
+.pin-agent { border-color: var(--ring); box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 0 var(--ring); animation: ring-breathe 3.2s ease-in-out infinite; }
+.pin-agent img { box-shadow: 0 0 0 2px var(--ring); }
+.pin-agent .pin-text b { color: #fff; letter-spacing: .02em; }
+@keyframes ring-breathe { 50% { box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 14px 1px color-mix(in srgb, var(--ring) 55%, transparent); } }
+.pin-bubble { position: absolute; left: 50%; bottom: calc(100% + 12px); width: max-content; max-width: 250px; white-space: normal; text-align: left;
+  padding: 8px 11px; border-radius: 14px; font-size: 12.5px; line-height: 1.38; color: #fff6ee; pointer-events: none;
+  background: linear-gradient(160deg, rgba(40,16,72,.94), rgba(18,8,40,.94)); border: 1px solid color-mix(in srgb, var(--ring, #fff) 70%, transparent);
+  box-shadow: 0 10px 28px rgba(0,0,0,.5), 0 0 18px color-mix(in srgb, var(--ring, #fff) 30%, transparent);
+  transform-origin: 50% 100%; animation: bubble-life 14s cubic-bezier(.2,.9,.25,1.2) forwards; }
+.pin-bubble::after { content: ""; position: absolute; left: 50%; top: 100%; width: 12px; height: 12px; margin-left: -6px; margin-top: -6px; transform: rotate(45deg);
+  background: rgba(18,8,40,.94); border-right: 1px solid color-mix(in srgb, var(--ring, #fff) 70%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--ring, #fff) 70%, transparent); }
+.pin-bubble.is-thought { font-style: italic; color: #e9dcff; border-style: dashed; }
+.pin-bubble.is-trade { color: #ffe9a8; }
+@keyframes bubble-life { 0% { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.6); } 6% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+  9% { transform: translateX(-50%) scale(1); } 88% { opacity: 1; transform: translateX(-50%); } 100% { opacity: 0; transform: translateX(-50%) translateY(-6px); } }
+.pin[data-mode=mini] .pin-bubble { display: none; }
+/* near the top edge the bubble drops under the pin instead */
+.pin[data-flip="1"] .pin-bubble { bottom: auto; top: calc(100% + 12px); transform-origin: 50% 0; }
+.pin[data-flip="1"] .pin-bubble::after { top: auto; bottom: 100%; margin-top: 0; margin-bottom: -6px; transform: rotate(225deg); }

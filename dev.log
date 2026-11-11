@@ -1,0 +1,104 @@
+▲ Next.js 16.4.3 (Turbopack)
+- Local:         http://localhost:4090
+- Network:       http://172.20.10.2:4090
+- Environments: .env.local
+✓ Ready in 283ms
+✓ Running next.config.ts took 105ms
+
+ GET /api/agents/dez/avatar 200 in 534ms (next.js: 522ms, application-code: 13ms)
+○ Compiling / ...
+ GET / 200 in 2.5s (next.js: 201ms, application-code: 2.3s)
+ GET /api/agents/marisol/avatar 200 in 23ms (next.js: 15ms, application-code: 8ms)
+ GET /api/agents/vince/avatar 200 in 6ms (next.js: 1.2ms, application-code: 5ms)
+ GET /api/agents/hollis/avatar 200 in 5ms (next.js: 0.9ms, application-code: 4ms)
+ GET /api/agents/kiki/avatar 200 in 8ms (next.js: 1.2ms, application-code: 7ms)
+ GET /api/agents/sloane/avatar 200 in 4ms (next.js: 1.2ms, application-code: 3ms)
+ GET /api/agents/ray/avatar 200 in 6ms (next.js: 1.8ms, application-code: 4ms)
+ GET /api/agents/lou/avatar 200 in 12ms (next.js: 1.5ms, application-code: 10ms)
+ GET /api/agents/dez/avatar 200 in 15ms (next.js: 7ms, application-code: 8ms)
+ GET /api/agents/doc/avatar 200 in 5ms (next.js: 0.6ms, application-code: 5ms)
+ GET /api/agents/tex/avatar 200 in 5ms (next.js: 1.2ms, application-code: 3ms)
+ GET /api/town 200 in 1858ms (next.js: 31ms, application-code: 1827ms)
+ GET /api/town 200 in 1697ms (next.js: 0.8ms, application-code: 1696ms)
+[browser] Uncaught Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <SegmentViewNode type="page" pagePath="page.tsx">
+      <SegmentTrieNode>
+      <Home>
+        <TownProvider initial={{agents:[...], ...}}>
+          ...
+            <section id="map" className="relative s...">
+              <div className="md:absolut...">
+                <LoadableComponent>
+                <div className="hidden md:...">
+                  <div>
+                  <aside id="feed" data-pin-obstacle={true} className="glass-map ...">
+                    <div>
+                    <div className="min-h-0 fl...">
+                      <AgentRail onPick={function bound dispatchSetState}>
+                        <ul className="h-full spa...">
+                          <li className="feed-in">
+                            <button type="button" onClick={function onClick} className="flex w-ful...">
+                              <img>
+                              <span className="min-w-0 te...">
+                                <b>
+                                <span className="text-haze">
++                                 22s
+-                                 20s
+                                ...
+                          ...
+              ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at span (<anonymous>)
+    at <unknown> (src/components/AgentRail.tsx:21:15)
+    at Array.map (<anonymous>)
+    at AgentRail (src/components/AgentRail.tsx:14:31)
+    at MapHero (src/components/MapHero.tsx:77:43)
+    at Home (src/app/page.tsx:19:7)
+  19 |             <span className="min-w-0 text-[13px] leading-[1.4]">
+  20 |               <b style={{ color: color(e.agent) }}>{name(e.agent)}</b>
+> 21 |               <span className="text-haze"> {e.kind === "say" && e.to ? `to ${name(e.to)}` : VERB[e.kind]} · {e.district} · {ago(e.at)}</span>
+     |               ^
+  22 |               <span className={`block ${e.kind === "thought" ? "italic text-haze" : e.kind === "trade" ? "text-sun" : e.kind === "move" ? "text-haze" : "text-ink"}`}>
+  23 |                 {e.kind === "say" ? `“${e.text}”` : e.text}
+  24 |               </span>
+[browser] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+[browser] THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+ GET /api/town 200 in 1989ms (next.js: 4ms, application-code: 1984ms)
+ GET /api/town 200 in 1726ms (next.js: 3ms, application-code: 1722ms)
+✓ Compiled in 1319ms
+ GET /api/town 200 in 1931ms (next.js: 14ms, application-code: 1917ms)
+ GET /api/town 200 in 1899ms (next.js: 1.7ms, application-code: 1898ms)
+ GET / 200 in 2.1s (next.js: 5ms, application-code: 2.1s)
+ GET /api/town 200 in 1711ms (next.js: 7ms, application-code: 1704ms)
+ GET /api/town 200 in 1830ms (next.js: 3ms, application-code: 1827ms)
+[browser] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+[browser] THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+ GET /api/town 200 in 1963ms (next.js: 3ms, application-code: 1960ms)
+ GET /api/town 200 in 1885ms (next.js: 4ms, application-code: 1881ms)
+ GET /api/town 200 in 1957ms (next.js: 78ms, application-code: 1880ms)
+[browser] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+[browser] THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+✓ Compiled in 5ms
+ GET /api/town 200 in 1942ms (next.js: 3ms, application-code: 1939ms)
+ GET / 200 in 1799ms (next.js: 2ms, application-code: 1796ms)
+ GET /api/town 200 in 1680ms (next.js: 1.3ms, application-code: 1679ms)
+ GET /api/town 200 in 1916ms (next.js: 1.4ms, application-code: 1915ms)
+[browser] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+[browser] THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+ GET /api/town 200 in 1690ms (next.js: 2ms, application-code: 1688ms)
+ GET /api/town 200 in 1774ms (next.js: 1.8ms, application-code: 1772ms)
+ GET /api/town 200 in 500ms (next.js: 1.2ms, application-code: 499ms)
+[?25h

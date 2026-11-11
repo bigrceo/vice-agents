@@ -1,7 +1,7 @@
 "use client";
 import { MapPoster } from "./MapPoster";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BRAND, OFFICIAL_MINT } from "@/lib/brand";
 import dynamic from "next/dynamic";
 import { AgentRail } from "./AgentRail";
@@ -13,7 +13,31 @@ import { Countdown } from "./Countdown";
 /** Leonida-style hero: the state map full-bleed, a glass card on the left, the "on the map" rail on the right. */
 export function MapHero() {
   const town = useTown();
-  const coins = town.agents.filter((a) => a.u != null).map(agentAsCoin);
+  // the worker moves them every few seconds; on screen they glide toward where they are heading
+  const shown = useRef(new Map<string, [number, number]>());
+  const [, frame] = useState(0);
+  useEffect(() => {
+    let raf = 0, last = 0;
+    const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      if (t - last < 66) return; last = t;
+      let moved = false;
+      for (const a of town.agents) {
+        if (a.u == null) continue;
+        const p = shown.current.get(a.id);
+        if (!p) { shown.current.set(a.id, [a.u, a.v]); moved = true; continue; }
+        const du = a.u - p[0], dv = a.v - p[1];
+        if (Math.abs(du) + Math.abs(dv) > 1e-5) { p[0] += du * 0.12; p[1] += dv * 0.12; moved = true; }
+      }
+      if (moved) frame((n) => n + 1);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [town.agents]);
+  const coins = town.agents.filter((a) => a.u != null).map((a) => {
+    const p = shown.current.get(a.id);
+    return agentAsCoin(p ? { ...a, u: p[0], v: p[1] } : a, town.events);
+  });
   const [active, setActive] = useState<string | null>(null);
   const paper = town.agents.every((a) => a.mode === "paper");
   const [lead, tail] = BRAND.tagline.split(". ");

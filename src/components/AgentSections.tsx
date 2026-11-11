@@ -38,7 +38,7 @@ export function TradeStrip() {
           <span className="text-haze">{t.side === "buy" ? "bought" : "sold"}</span>
           <span className="font-bold">${t.symbol}</span>
           <span className={t.side === "buy" ? "text-up" : "text-down"}>{eth(t.eth)}</span>
-          <span className="text-haze/70">{ago(t.at)}</span>
+          <span className="text-haze/70" suppressHydrationWarning>{ago(t.at)}</span>
         </li>
       ))}
     </ul>
@@ -86,7 +86,7 @@ export function TradeLog() {
             <p className="text-[14px]"><b style={{ color: ag(t.agent)?.color }}>{ag(t.agent)?.name}</b>{" "}
               <span className={t.side === "buy" ? "text-up" : "text-down"}>{t.side === "buy" ? "bought" : "sold"}</span>{" "}
               <a className="font-bold hover:text-sun" href={t.kind === "pons" ? ponsUrl(t.token) : explorerToken(t.token)} target="_blank" rel="noreferrer">${t.symbol}</a>{" "}
-              <span className="text-haze">{eth(t.eth)} at {t.price.toPrecision(4)} ETH · {t.mode === "real" && t.tx ? <a className="text-up" href={`${EXPLORER}/tx/${t.tx}`} target="_blank" rel="noreferrer">on chain ↗</a> : "paper"} · {ago(t.at)}</span></p>
+              <span className="text-haze" suppressHydrationWarning>{eth(t.eth)} at {t.price.toPrecision(4)} ETH · {t.mode === "real" && t.tx ? <a className="text-up" href={`${EXPLORER}/tx/${t.tx}`} target="_blank" rel="noreferrer">on chain ↗</a> : "paper"} · {ago(t.at)}</span></p>
             <p className="mt-0.5 text-[14px] leading-[1.45] text-haze">{t.reason}</p>
           </div>
         </li>

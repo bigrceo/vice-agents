@@ -264,7 +264,7 @@ function PinLayout({ entities, slots, hovered, selected }: { entities: Entity[];
       }
       if (box) taken.push(box);
       if (s.el.dataset.mode !== mode) s.el.dataset.mode = mode;
-      if (box) s.el.style.transform = `translate3d(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px, 0)`;
+      if (box) { s.el.style.transform = `translate3d(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px, 0)`; const flip = box.y < 190 ? "1" : ""; if ((s.el.dataset.flip ?? "") !== flip) s.el.dataset.flip = flip; }
       if (s.line) {
         const ex = box ? box.x + box.w / 2 : sx;
         const ey = box ? (box.y + box.h < sy ? box.y + box.h : box.y > sy ? box.y : box.y + box.h / 2) : sy;
@@ -286,8 +286,10 @@ function Pins({ entities, slots, hovered, selected, onHover, onSelect }: { entit
         const hot = hovered === e.coin.mint || selected === e.coin.mint;
         return (
           <button key={e.coin.mint} type="button" data-mode="hidden" ref={(el) => { slot(e.coin.mint).el = el; }}
-            className={`pin ${e.main ? "pin-main" : ""} ${hot ? "is-active" : ""}`} onClick={() => onSelect(e.coin.mint)}
-            onMouseEnter={() => onHover(e.coin.mint)} onMouseLeave={() => onHover(null)} title={`$${e.coin.ticker}`}>
+            className={`pin ${e.main ? "pin-main" : ""} ${e.coin.ring ? "pin-agent" : ""} ${hot ? "is-active" : ""}`} onClick={() => onSelect(e.coin.mint)}
+            style={e.coin.ring ? ({ "--ring": e.coin.ring } as React.CSSProperties) : undefined}
+            onMouseEnter={() => onHover(e.coin.mint)} onMouseLeave={() => onHover(null)} title={e.coin.ring ? e.coin.name : `$${e.coin.ticker}`}>
+            {e.coin.bubble && <span key={e.coin.bubble.id} className={`pin-bubble is-${e.coin.bubble.kind}`}>{e.coin.bubble.text}</span>}
             <img src={e.coin.still} alt="" loading="lazy" />
             <span className="pin-text"><b>{e.coin.curve === "agent" ? e.coin.ticker : `$${e.coin.ticker}`}</b><i className={e.coin.change24h >= 0 ? "text-up" : "text-down"}>{pct(e.coin.change24h)}</i></span>
           </button>
@@ -325,7 +327,7 @@ export function StateMap({ coins, active, onActive, children }: { coins: Coin[];
           : <><Suspense fallback={null}><Ground onReady={onReady} mode={mode} /></Suspense>
         {ready && <><DistrictLabels toWorld={toWorld} /><CityLight mode={mode} api={api} />{!small && <TileLayer mode={mode} planeW={PLANE_W} planeH={PLANE_H} api={api} />}</>}</>}
         {ready && entities.map((e) => <Beacon key={e.coin.mint} e={e} active={active === e.coin.mint || hovered === e.coin.mint} onHover={setHovered} onSelect={() => select(e.coin.mint)} />)}
-        {ready && !MIAMI && entities.map((e) => { const [x, , z] = toWorld(e.plot.u, e.plot.v); return <group key={`b${e.coin.mint}`} position-y={LAND_Y}><ClipBoard coin={e.coin} x={x} z={z} main={e.main} active={active === e.coin.mint || hovered === e.coin.mint} onHover={setHovered} onSelect={() => select(e.coin.mint)} /></group>; })}
+        {ready && !MIAMI && entities.filter((e) => !e.coin.ring).map((e) => { const [x, , z] = toWorld(e.plot.u, e.plot.v); return <group key={`b${e.coin.mint}`} position-y={LAND_Y}><ClipBoard coin={e.coin} x={x} z={z} main={e.main} active={active === e.coin.mint || hovered === e.coin.mint} onHover={setHovered} onSelect={() => select(e.coin.mint)} /></group>; })}
         {/* agents walk the map: no open lots */}
         <Controls entities={entities} selected={active} api={api} onWorld={setReal} />
         <PinLayout entities={entities} slots={slots} hovered={hovered} selected={active} />

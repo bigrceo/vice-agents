@@ -18,7 +18,7 @@ export function AgentRail({ onPick, limit = 40 }: { onPick?: (id: string) => voi
             <img src={avatar(e.agent)} alt="" className="size-9 flex-none rounded-[10px]" />
             <span className="min-w-0 text-[13px] leading-[1.4]">
               <b style={{ color: color(e.agent) }}>{name(e.agent)}</b>
-              <span className="text-haze"> {e.kind === "say" && e.to ? `to ${name(e.to)}` : VERB[e.kind]} · {e.district} · {ago(e.at)}</span>
+              <span className="text-haze" suppressHydrationWarning> {e.kind === "say" && e.to ? `to ${name(e.to)}` : VERB[e.kind]} · {e.district} · {ago(e.at)}</span>
               <span className={`block ${e.kind === "thought" ? "italic text-haze" : e.kind === "trade" ? "text-sun" : e.kind === "move" ? "text-haze" : "text-ink"}`}>
                 {e.kind === "say" ? `“${e.text}”` : e.text}
               </span>

@@ -92,11 +92,20 @@ async function refreshPrices() {
 
 // ---------------- movement ----------------
 async function walk() {
-  const rows = await sql`select id, u, v, tu, tv from la_agents`;
+  const rows = await sql`select id, u, v, tu, tv, district from la_agents`;
   for (const r of rows) {
+    // between thoughts they roam their usual spots, so the map is never still
+    const a = CAST.find((c) => c.id === r.id)!;
+    if (Math.hypot(r.tu - r.u, r.tv - r.v) < 0.004 && Math.random() < 0.035) {
+      const to = a.haunts[Math.floor(Math.random() * a.haunts.length)];
+      const d = DISTRICTS.find((x) => x.name === to)!;
+      r.tu = d.u + (Math.random() - 0.5) * 0.012; r.tv = d.v + (Math.random() - 0.5) * 0.012;
+      await sql`update la_agents set tu = ${r.tu}, tv = ${r.tv}, district = ${to} where id = ${r.id}`;
+      if (to !== r.district) await sql`insert into la_events (agent_id, kind, text, district) values (${r.id}, 'move', ${`heads to ${to}`}, ${to})`;
+    }
     const dx = r.tu - r.u, dv = r.tv - r.v, d = Math.hypot(dx, dv);
     let u = r.u, v = r.v;
-    if (d > 0.004) { const s = Math.min(1, 0.012 / d); u += dx * s; v += dv * s; }
+    if (d > 0.004) { const s = Math.min(1, 0.008 / d); u += dx * s; v += dv * s; }
     else { u = r.tu + (Math.random() - 0.5) * 0.006; v = r.tv + (Math.random() - 0.5) * 0.006; } // loiter
     await sql`update la_agents set u = ${u}, v = ${v}, updated_at = now() where id = ${r.id}`;
   }
