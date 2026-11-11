@@ -171,7 +171,7 @@ async function trade(a: Agent, me: any, pos: any[], t: { side: string; symbol: s
   const mode = REAL && bal >= MIN_REAL_ETH ? "real" : "paper";
   let qty: number, eth: number, tx: string | null = null;
   if (t.side === "buy") {
-    eth = me.cash * pct; if (eth < 0.0005) return;
+    eth = (mode === "real" ? Math.max(0, bal - 0.002) : me.cash) * pct; if (eth < 0.0005) return; // real: size on the wallet, keep 0.002 ETH for gas
     qty = eth / px.price;
     if (mode === "real") tx = await sendReal(a, px, "buy", parseEther(eth.toFixed(18)));
     await sql`update la_agents set cash = cash - ${eth} where id = ${a.id}`;

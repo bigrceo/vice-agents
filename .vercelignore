@@ -2,3 +2,7 @@ x-launch-pack
 /brand
 /batch
 .secrets
+railway.json
+worker
+scripts
+ticker.log
