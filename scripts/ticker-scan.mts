@@ -13,8 +13,12 @@ const tokens = (logs as any[]).map((l) => l.args.token);
 console.log("launches", tokens.length);
 const abi = parseAbi(["function symbol() view returns (string)"]);
 const hits: Record<string, number> = Object.fromEntries(want.map((w) => [w, 0]));
-for (let i = 0; i < tokens.length; i += 500) {
-  const r = await client.multicall({ contracts: tokens.slice(i, i + 500).map((address: any) => ({ address, abi, functionName: "symbol" })) });
-  for (const x of r) if (x.status === "success") { const s = String(x.result).toUpperCase().replace(/^\$/, ""); if (s in hits) hits[s]++; }
-}
-console.log(hits);
+const chunks: any[][] = []; for (let i = 0; i < tokens.length; i += 1000) chunks.push(tokens.slice(i, i + 1000));
+let done = 0;
+const work = async () => { for (let c = chunks.shift(); c; c = chunks.shift()) {
+  const r = await client.multicall({ contracts: c.map((address: any) => ({ address, abi, functionName: "symbol" })) }).catch(() => []);
+  for (const x of r as any[]) if (x.status === "success") { const s = String(x.result).toUpperCase().replace(/^\$/, ""); if (s in hits) hits[s]++; }
+  if (++done % 50 === 0) console.log("chunks", done, JSON.stringify(hits));
+} };
+await Promise.all(Array.from({ length: 12 }, work));
+console.log("FINAL", hits);
