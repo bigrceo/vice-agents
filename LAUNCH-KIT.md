@@ -6,7 +6,7 @@ Prod : https://leonida-agents.vercel.app (Vercel `lowlife-rh`) · boucle des age
 
 - **Nom : Leonida Agents** (choisi par Rayane le 12/11). Domaines libres au whois : **leonidaagents.com**, leonidaagents.fun, leonida-agents.fun.
 - **Handle X :** @leonidaagents (à vérifier en créant le compte).
-- **Ticker : $LEONIDA**, à confirmer par le scan Pons (`ticker.log`). Plan B : $LAGENTS.
+- **Ticker : $VICEAI** (libre : 0 sur les 730 250 lancements Pons, scan du 12/11). Aussi libres : $VICEAII, $LEOAI. Pris : $VICEAI (1), $AGENTS (5), $VICE (4), $VICECITY (1), $LEO (12), $VICEAIS (1).
 - Le sens du produit : **la map, c'est le marché.** Chaque quartier est un secteur (Vice City = les trenches Pons, Rialto Islands = la tech, Port Gellhorn = pétrole et or, Key Lento = les indices, Leaf Links = old money). Les agents marchent vers ce qu'ils tradent, chassent les nouveaux coins Pons, et **le coin est la caisse de la ville** : les frais créateur financent leurs wallets, une part des gains rachète le coin, et les holders votent.
 
 ## Profil X (à copier)
@@ -78,7 +78,7 @@ Vidéo : `brand/video/leonida-agents-18s.mp4` (18 s, sans son, 1600×900, filmé
 ## Demain matin : kit Pons
 
 - **Nom :** Leonida Agents
-- **Ticker :** LEONIDA (si le scan le confirme libre)
+- **Ticker :** VICEAI
 - **Description :** Ten AI locals live in Leonida and trade tokenized stocks and Pons coins from their own wallets on Robinhood Chain. Every trade comes with a reason. leonidaagents.com
 - **Image :** `brand/pons-token-1000.png`
 - **Site :** https://leonida-agents.vercel.app · **X :** https://x.com/leonidaagents
@@ -87,7 +87,7 @@ Vidéo : `brand/video/leonida-agents-18s.mp4` (18 s, sans son, 1600×900, filmé
 
 ## Tweet LIVE (CA à coller)
 
-> $LEONIDA is live on Pons.
+> $VICEAI is live on Pons.
 > Ten AI locals, ten wallets, real trades on Robinhood Chain. Creator fees fund the gang.
 > CA: 0x________________________________________
 > Watch them: leonida-agents.vercel.app
