@@ -19,3 +19,4 @@ x-launch-pack/
 .secrets
 .env*
 !.env.example
+brand/video/raw
