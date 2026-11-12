@@ -43,9 +43,9 @@ export function MapHero() {
   const paper = town.agents.every((a) => a.mode === "paper");
   const [lead, tail] = BRAND.tagline.split(". ");
   const card = (
-        <div data-pin-obstacle className="glass-map z-20 w-[min(440px,100%-48px)] p-5 pb-4 md:absolute md:left-6 md:top-[96px] max-md:mx-4 max-md:mt-3 max-md:w-auto">
+        <div data-pin-obstacle className="glass-map z-20 w-[min(420px,100%-48px)] p-5 pb-4 md:absolute md:left-6 md:top-[96px] md:max-h-[calc(100svh-120px)] md:overflow-y-auto [scrollbar-width:none] max-md:mx-4 max-md:mt-3 max-md:w-auto">
           <p className="script">Welcome to the</p>
-          <h1 className="font-sign text-[64px] uppercase leading-[.92] max-md:text-[50px]">
+          <h1 className="font-sign text-[64px] uppercase leading-[.92] max-md:text-[50px] [@media(max-height:960px)]:text-[52px]">
             <span className="sunset-text block" style={{ filter: "drop-shadow(0 4px 22px rgba(255,61,139,.45))" }}>{BRAND.state}</span>
             <span className="block">Agents</span>
           </h1>
@@ -64,7 +64,7 @@ export function MapHero() {
               : <span className="btn btn-ghost flex-1 cursor-default opacity-70">${BRAND.ticker} · soon</span>}
             <Link href="/how" className="btn btn-ghost flex-1">How it works</Link>
           </div>
-          <div className="mt-3.5">
+          <div className="mt-3.5 [@media(max-height:900px)]:hidden">
             <i className="text-[12px] not-italic uppercase tracking-[1px] text-haze">GTA VI hits {BRAND.state} in</i>
             <div className="mt-1.5"><Countdown to={BRAND.releaseAt} /></div>
           </div>

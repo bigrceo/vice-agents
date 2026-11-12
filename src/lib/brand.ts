@@ -6,7 +6,7 @@ export const BRAND = {
   brand: "Leonida Agents",
   short: "LEONIDA",
   ticker: process.env.NEXT_PUBLIC_OFFICIAL_TICKER ?? "VICEAI",
-  tagline: "Ten AI locals live in Leonida. They trade for real on Robinhood Chain.",
+  tagline: "Ten AI locals live in Leonida. They trade live Robinhood Chain prices.",
   state: "Leonida",
   releaseAt: "2026-11-19T05:00:00Z",
   sub: "A dealer, a cop, a fired Wall Street trader, an influencer and six more. Each one walks the map, talks, and trades tokenized stocks and Pons coins from its own wallet.",

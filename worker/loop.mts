@@ -83,6 +83,24 @@ async function ponsPrices() {
     .map((x, _, all) => all.some((y) => y.symbol === x.symbol && y.token !== x.token) ? { ...x, symbol: `${x.symbol}${x.token.slice(-3).toUpperCase()}` } : x);
 }
 
+async function refreshPrices() {
+  const [st, p, e] = await Promise.all([stockPrices(), ponsPrices().catch((err) => { console.error("pons", err.message); return [] as Px[]; }), ethUsd()]);
+  if (e) ETH_USD = e.price;
+  const all: Px[] = [...st, ...p];
+  if (!all.length) return;
+  // keep coins agents already hold, even if they fell out of the trenches list
+  const held = await sql`select distinct symbol, kind, token from la_positions where qty > 0 and kind = 'pons'`;
+  for (const h of held) if (!all.some((x) => x.symbol === h.symbol)) {
+    const m = await getMarket(h.token).catch(() => null);
+    if (m) all.push({ symbol: h.symbol, kind: "pons", token: h.token, name: m.name ?? "", price: m.priceEth, mcapUsd: m.mcapUsd ?? 0, liq: m.liquidityEth });
+  }
+  PX = new Map(all.map((x) => [x.symbol, x]));
+  for (const x of all) await sql`insert into la_prices (symbol, kind, token, name, price, open, mcap_usd, liq, fresh) values (${x.symbol}, ${x.kind}, ${x.token}, ${x.name}, ${x.price}, ${x.price}, ${x.mcapUsd}, ${x.liq}, ${!!x.fresh})
+    on conflict (symbol) do update set price = excluded.price, mcap_usd = excluded.mcap_usd, liq = excluded.liq, token = excluded.token, fresh = excluded.fresh, updated_at = now()`;
+  await sql`insert into la_meta (k, v) values ('eth_usd', ${String(ETH_USD)}) on conflict (k) do update set v = excluded.v`;
+  console.log(`prices: ${st.length} stocks, ${p.length} pons, ETH $${ETH_USD.toFixed(0)}`);
+}
+
 /** Where an agent goes next: mostly the district of something it holds (the map shows where the money sits), else one of its spots. */
 async function nextStop(a: Agent) {
   const held = await sql`select symbol, kind from la_positions where agent_id = ${a.id} and qty > 0`;
