@@ -38,7 +38,8 @@ async function load(): Promise<Town> {
   const agents: AgentView[] = CAST.map((a) => {
     const r = rows.find((x: any) => x.id === a.id) ?? {};
     const ps = pos.filter((p: any) => p.agent_id === a.id).map((p: any) => {
-      const value = p.qty * (px.get(p.symbol)?.price ?? 0);
+      const x = px.get(p.symbol), raw = p.qty * (x?.price ?? 0), liq = x?.liq ?? 0;
+      const value = p.kind === "pons" && liq > 0 ? raw * (liq / (liq + raw)) : raw;   // marked at what the pool would actually pay
       return { symbol: p.symbol, kind: p.kind, token: p.token, qty: p.qty, cost: p.cost, value, pnlPct: p.cost > 0 ? (value / p.cost - 1) * 100 : 0 };
     });
     const equity = (r.cash ?? START_ETH) + ps.reduce((s: number, p: any) => s + p.value, 0);

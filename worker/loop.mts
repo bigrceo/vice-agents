@@ -36,6 +36,7 @@ async function schema() {
     eth double precision, reason text, mode text, tx text, at timestamptz default now())`;
   await sql`create table if not exists la_prices (symbol text primary key, kind text, token text, name text, price double precision, open double precision, mcap_usd double precision, updated_at timestamptz default now())`;
   await sql`create table if not exists la_meta (k text primary key, v text)`;
+  await sql`alter table la_prices add column if not exists liq double precision`;
   for (const a of CAST) {
     const d = DISTRICTS.find((x) => x.name === a.home)!;
     await sql`insert into la_agents (id, address, u, v, tu, tv, district, cash) values (${a.id}, ${account(a).address}, ${d.u}, ${d.v}, ${d.u}, ${d.v}, ${a.home}, ${START_ETH}) on conflict (id) do update set address = excluded.address`;
@@ -43,7 +44,10 @@ async function schema() {
 }
 
 // ---------------- prices ----------------
-type Px = { symbol: string; kind: "stock" | "pons"; token: string; name: string; price: number; mcapUsd: number };
+type Px = { symbol: string; kind: "stock" | "pons"; token: string; name: string; price: number; mcapUsd: number; liq: number };
+/** Paper fills move the price like a constant-product pool of `liq` ETH would: no free exits from thin coins. */
+const fillIn = (eth: number, x: Px) => (eth / x.price) * (x.liq / (x.liq + eth));
+const fillOut = (qty: number, x: Px) => { const v = qty * x.price; return v * (x.liq / (x.liq + v)); };
 let PX = new Map<string, Px>();
 let ETH_USD = 0;
 const PROBE = parseEther("0.005");
@@ -53,7 +57,7 @@ async function stockPrices() {
   for (const sym of UNIVERSE) {
     const st = STOCKS.find((s) => s.symbol === sym); if (!st) continue;
     const r = await bestRoute(ZERO, st.address, PROBE, {}).catch(() => null);
-    if (r && r.out > 0n) out.push({ symbol: sym, kind: "stock", token: st.address, name: sym, price: 0.005 / (Number(r.out) / 10 ** st.decimals), mcapUsd: 0 });
+    if (r && r.out > 0n) out.push({ symbol: sym, kind: "stock", token: st.address, name: sym, price: 0.005 / (Number(r.out) / 10 ** st.decimals), mcapUsd: 0, liq: 1000 });
   }
   return out;
 }
@@ -67,9 +71,11 @@ async function ponsPrices() {
     ponsCache = { at: Date.now(), list: [...new Set((logs as any[]).map((l) => l.args.token as Address))].slice(-250) };
   }
   const ms = await Promise.all(ponsCache.list.map((t) => getMarket(t).catch(() => null)));
-  return ms.filter((m) => m && m.mcapUsd && m.liquidityEth > 0.2 && m.symbol)
+  return ms.filter((m) => m && m.mcapUsd && m.liquidityEth > 0.2 && String(m.symbol ?? "").replace(/[^A-Za-z0-9]/g, ""))
     .sort((a, b) => b!.mcapUsd! - a!.mcapUsd!).slice(0, 8)
-    .map((m) => ({ symbol: String(m!.symbol).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10), kind: "pons" as const, token: m!.token, name: m!.name ?? "", price: m!.priceEth, mcapUsd: m!.mcapUsd! }));
+    .map((m) => ({ symbol: String(m!.symbol).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), kind: "pons" as const, token: m!.token, name: m!.name ?? "", price: m!.priceEth, mcapUsd: m!.mcapUsd!, liq: m!.liquidityEth }))
+    // two Pons coins can share a ticker: the symbol becomes unique by address, so a bag is always priced by its own token
+    .map((x, _, all) => all.some((y) => y.symbol === x.symbol && y.token !== x.token) ? { ...x, symbol: `${x.symbol}${x.token.slice(-3).toUpperCase()}` } : x);
 }
 
 async function refreshPrices() {
@@ -81,11 +87,11 @@ async function refreshPrices() {
   const held = await sql`select distinct symbol, kind, token from la_positions where qty > 0 and kind = 'pons'`;
   for (const h of held) if (!all.some((x) => x.symbol === h.symbol)) {
     const m = await getMarket(h.token).catch(() => null);
-    if (m) all.push({ symbol: h.symbol, kind: "pons", token: h.token, name: m.name ?? "", price: m.priceEth, mcapUsd: m.mcapUsd ?? 0 });
+    if (m) all.push({ symbol: h.symbol, kind: "pons", token: h.token, name: m.name ?? "", price: m.priceEth, mcapUsd: m.mcapUsd ?? 0, liq: m.liquidityEth });
   }
   PX = new Map(all.map((x) => [x.symbol, x]));
-  for (const x of all) await sql`insert into la_prices (symbol, kind, token, name, price, open, mcap_usd) values (${x.symbol}, ${x.kind}, ${x.token}, ${x.name}, ${x.price}, ${x.price}, ${x.mcapUsd})
-    on conflict (symbol) do update set price = excluded.price, mcap_usd = excluded.mcap_usd, updated_at = now()`;
+  for (const x of all) await sql`insert into la_prices (symbol, kind, token, name, price, open, mcap_usd, liq) values (${x.symbol}, ${x.kind}, ${x.token}, ${x.name}, ${x.price}, ${x.price}, ${x.mcapUsd}, ${x.liq})
+    on conflict (symbol) do update set price = excluded.price, mcap_usd = excluded.mcap_usd, liq = excluded.liq, token = excluded.token, updated_at = now()`;
   await sql`insert into la_meta (k, v) values ('eth_usd', ${String(ETH_USD)}) on conflict (k) do update set v = excluded.v`;
   console.log(`prices: ${s.length} stocks, ${p.length} pons, ETH $${ETH_USD.toFixed(0)}`);
 }
@@ -180,20 +186,22 @@ async function trade(a: Agent, me: any, pos: any[], t: { side: string; symbol: s
   const mode = REAL && bal >= MIN_REAL_ETH ? "real" : "paper";
   let qty: number, eth: number, tx: string | null = null;
   if (t.side === "buy") {
-    eth = (mode === "real" ? Math.max(0, bal - 0.002) : me.cash) * pct; if (eth < 0.0005) return; // real: size on the wallet, keep 0.002 ETH for gas
-    qty = eth / px.price;
+    eth = (mode === "real" ? Math.max(0, bal - 0.002) : me.cash) * pct; // real: size on the wallet, keep 0.002 ETH for gas
+    if (px.kind === "pons") eth = Math.min(eth, px.liq * 0.02);   // never more than 2% of a coin's pool
+    if (eth < 0.0005) return;
+    qty = fillIn(eth, px);
     if (mode === "real") tx = await sendReal(a, px, "buy", parseEther(eth.toFixed(18)));
     await sql`update la_agents set cash = cash - ${eth} where id = ${a.id}`;
     await sql`insert into la_positions (agent_id, symbol, kind, token, qty, cost) values (${a.id}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${eth})
       on conflict (agent_id, symbol) do update set qty = la_positions.qty + excluded.qty, cost = la_positions.cost + excluded.cost`;
   } else {
     if (!held || held.qty <= 0) return;
-    qty = held.qty * (pct >= 0.55 ? 1 : pct); eth = qty * px.price;
+    qty = held.qty * (pct >= 0.55 ? 1 : pct); eth = fillOut(qty, px);
     if (mode === "real") tx = await sendReal(a, px, "sell", BigInt(Math.floor(qty * 1e18)));
     await sql`update la_agents set cash = cash + ${eth} where id = ${a.id}`;
     await sql`update la_positions set qty = qty - ${qty}, cost = cost * (1 - ${qty / held.qty}) where agent_id = ${a.id} and symbol = ${sym}`;
   }
-  await sql`insert into la_trades (agent_id, side, symbol, kind, token, qty, price, eth, reason, mode, tx) values (${a.id}, ${t.side}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${px.price}, ${eth}, ${String(t.reason ?? "").slice(0, 220)}, ${mode}, ${tx})`;
+  await sql`insert into la_trades (agent_id, side, symbol, kind, token, qty, price, eth, reason, mode, tx) values (${a.id}, ${t.side}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${eth / qty}, ${eth}, ${String(t.reason ?? "").slice(0, 220)}, ${mode}, ${tx})`;
   await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'trade', ${`${t.side === "buy" ? "bought" : "sold"} ${eth.toFixed(4)} ETH of $${sym}: ${String(t.reason ?? "").slice(0, 160)}`}, ${me.district})`;
   await sql`update la_agents set mode = ${mode} where id = ${a.id}`;
   console.log(`${a.id} ${mode} ${t.side} ${sym} ${eth.toFixed(4)} ETH`);
