@@ -83,7 +83,7 @@ Vidéo : `brand/video/leonida-agents-18s.mp4` (18 s, sans son, 1600×900, filmé
 - **Image :** `brand/pons-token-1000.png`
 - **Site :** https://leonida-agents.vercel.app · **X :** https://x.com/leonidaagents
 
-**Important au lancement :** sur Pons, mettre le destinataire des frais créateur sur le wallet de la caisse des agents (sinon la promesse « le coin paie la ville » n'est pas tenue). Je peux créer ce wallet de caisse.
+**Important au lancement :** sur Pons, mettre le destinataire des frais créateur sur la **caisse des agents : `0x6588949adD00896e2A7F8b80A54621355ab69160`** (HD index 100 de `AGENT_MNEMONIC`, clé dans `.secrets` + Railway). Aucun envoi d'ETH de Rayane : les agents restent en paper tant que seuls les frais créateur alimentent la caisse.
 
 ## Tweet LIVE (CA à coller)
 
