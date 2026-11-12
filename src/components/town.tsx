@@ -18,7 +18,9 @@ export function TownProvider({ initial, children }: { initial: Town; children: R
   return <Ctx.Provider value={town}>{children}</Ctx.Provider>;
 }
 export const useTown = () => useContext(Ctx)!;
-export const avatar = (id: string) => `/api/agents/${id}/avatar`;
+/** Every agent has an original portrait: a face crop for pins and rows, the full 3:4 shot for cards. */
+export const avatar = (id: string) => `/agents/${id}.jpg`;
+export const portrait = (id: string) => `/agents/${id}-full.jpg`;
 export const first = (n: string) => n.replace(/^(Officer|Doc|Big) /, "").split(" ")[0];
 
 /** The map draws "coins": each agent is one, standing where it walks. */

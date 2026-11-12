@@ -1,0 +1,30 @@
+[
+  {
+    "created_at": "2026-11-11T23:18:35.286254Z",
+    "display_name": "Higgsfield Soul 2.0",
+    "id": "316093a5-7088-458f-8db6-2b6c9b793c18",
+    "job_type": "text2image_soul_v2",
+    "min_result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3ElR3QltTNzGYrfgy3qIR7BfVgL/hf_20261111_231835_316093a5-7088-458f-8db6-2b6c9b793c18_min.webp",
+    "params": {
+      "batch_size": 1,
+      "enhance_prompt": false,
+      "height": 1536,
+      "prompt": "Heavy-set gruff pawn shop owner in his 50s, bald, thick beard, Hawaiian shirt, jeweler's loupe on his forehead, glass counter full of gold watches, tropical island shop. Photorealistic cinematic portrait, golden-hour pink and orange sunset light, humid Florida atmosphere, palm trees, shallow depth of field, film grain, 1980s-meets-today Miami vibe, original character, looking at camera, waist-up",
+      "quality": "720p",
+      "seed": 523183,
+      "style": {
+        "id": "3db34ab5-3439-4317-9e03-08dc30852e69",
+        "name": "General",
+        "strength": null,
+        "url": "https://cdn.higgsfield.ai/soul-v2-style/f33d85f2-6521-4fa8-8e8f-894cfbdee578.webp"
+      },
+      "style_id": "3db34ab5-3439-4317-9e03-08dc30852e69",
+      "style_strength": null,
+      "use_relax": false,
+      "use_sage_attention": false,
+      "width": 1152
+    },
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3ElR3QltTNzGYrfgy3qIR7BfVgL/hf_20261111_231835_316093a5-7088-458f-8db6-2b6c9b793c18.png",
+    "status": "completed"
+  }
+]

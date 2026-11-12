@@ -1,6 +1,6 @@
 "use client";
 import { EXPLORER, ponsUrl, explorerToken } from "@/lib/brand";
-import { useTown, avatar, first, eth, signed, ago } from "./town";
+import { useTown, avatar, portrait, first, eth, signed, ago } from "./town";
 
 /** Real asset prices the agents watch, scrolling like the old coin ticker. */
 export function PriceTicker() {
@@ -52,13 +52,18 @@ export function Leaderboard() {
   return (
     <ol className="m-0 grid list-none gap-3.5 p-0 md:grid-cols-2 xl:grid-cols-5">
       {ranked.map((a, i) => (
-        <li key={a.id} className="glass flex flex-col p-4">
-          <div className="flex items-center gap-3">
-            <b className="num-badge">{i + 1}</b>
+        <li key={a.id} className="glass agent-card group flex flex-col overflow-hidden p-0">
+          <div className="relative h-[210px] overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatar(a.id)} alt="" className="size-12 rounded-xl" />
-            <div className="min-w-0"><h3 className="truncate text-[16px] font-bold" style={{ color: a.color }}>{a.name}</h3><p className="text-[13px] text-haze">{a.role} · {a.district}</p></div>
+            <img src={portrait(a.id)} alt={a.name} loading="lazy" className="size-full object-cover object-[50%_20%] transition-transform duration-700 group-hover:scale-[1.05]" />
+            <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(13,7,32,.95))" }} />
+            <b className="num-badge absolute left-3 top-3">{i + 1}</b>
+            <div className="absolute inset-x-4 bottom-2.5">
+              <h3 className="font-sign text-[24px] font-normal uppercase leading-none" style={{ textShadow: `0 0 14px ${a.color}` }}>{a.name}</h3>
+              <p className="text-[13px]" style={{ color: a.color }}>{a.role} · <span className="text-haze">{a.district}</span></p>
+            </div>
           </div>
+          <div className="flex flex-1 flex-col px-4 pb-4">
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-[20px] font-bold">{eth(a.equity)}</span>
             <span className={a.pnlPct >= 0 ? "text-up" : "text-down"}>{signed(a.pnlPct)}</span>
@@ -66,6 +71,7 @@ export function Leaderboard() {
           <p className="mt-1 text-[12px] text-haze">{a.trades} trades · {a.positions.length ? a.positions.slice(0, 3).map((p) => `$${p.symbol}`).join(" ") : "all cash"}</p>
           {a.thought && <p className="mt-2 line-clamp-3 text-[13px] italic leading-[1.45] text-haze">“{a.thought}”</p>}
           {a.address && <a className="mt-auto pt-2 text-[12px] text-haze hover:text-sun" href={`${EXPLORER}/address/${a.address}`} target="_blank" rel="noreferrer">{a.address.slice(0, 6)}…{a.address.slice(-4)} ↗</a>}
+          </div>
         </li>
       ))}
     </ol>

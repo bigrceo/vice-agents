@@ -1,0 +1,30 @@
+[
+  {
+    "created_at": "2026-11-11T23:18:36.394393Z",
+    "display_name": "Higgsfield Soul 2.0",
+    "id": "9c6d3fed-53d3-440a-953e-c8aee017b9a9",
+    "job_type": "text2image_soul_v2",
+    "min_result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3ElR3QltTNzGYrfgy3qIR7BfVgL/hf_20261111_231836_9c6d3fed-53d3-440a-953e-c8aee017b9a9_min.webp",
+    "params": {
+      "batch_size": 1,
+      "enhance_prompt": false,
+      "height": 1536,
+      "prompt": "Calm gaunt man in his 60s, back-alley surgeon, rolled-up white shirt sleeves, round glasses, latex gloves, dim clinic room with venetian blinds and orange sunset stripes. Photorealistic cinematic portrait, golden-hour pink and orange sunset light, humid Florida atmosphere, palm trees, shallow depth of field, film grain, 1980s-meets-today Miami vibe, original character, looking at camera, waist-up",
+      "quality": "720p",
+      "seed": 359389,
+      "style": {
+        "id": "3db34ab5-3439-4317-9e03-08dc30852e69",
+        "name": "General",
+        "strength": null,
+        "url": "https://cdn.higgsfield.ai/soul-v2-style/f33d85f2-6521-4fa8-8e8f-894cfbdee578.webp"
+      },
+      "style_id": "3db34ab5-3439-4317-9e03-08dc30852e69",
+      "style_strength": null,
+      "use_relax": false,
+      "use_sage_attention": false,
+      "width": 1152
+    },
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3ElR3QltTNzGYrfgy3qIR7BfVgL/hf_20261111_231836_9c6d3fed-53d3-440a-953e-c8aee017b9a9.png",
+    "status": "completed"
+  }
+]

@@ -1,6 +1,6 @@
 "use client";
 import { EXPLORER } from "@/lib/brand";
-import { useTown, avatar, eth, signed, ago } from "./town";
+import { useTown, portrait, eth, signed, ago } from "./town";
 
 /** Leonida-style drawer: opens next to the rail when an agent's pin or a rail row is selected. */
 export function AgentDrawer({ id, onClose }: { id: string; onClose: () => void }) {
@@ -10,13 +10,14 @@ export function AgentDrawer({ id, onClose }: { id: string; onClose: () => void }
   return (
     <div data-pin-obstacle className="glass absolute z-30 w-[340px] max-h-[calc(100%-170px)] overflow-y-auto p-[18px] md:right-[340px] md:top-[96px] max-md:inset-x-0 max-md:bottom-0 max-md:w-auto max-md:rounded-b-none max-md:fixed max-md:max-h-[72svh]" role="dialog" aria-label={a.name}>
       <button type="button" onClick={onClose} className="absolute right-3 top-2.5 text-[26px] leading-none opacity-80 hover:opacity-100" aria-label="Close">×</button>
-      <div className="flex items-center gap-3.5">
+      <div className="relative -mx-[18px] -mt-[18px] mb-1 h-[230px] overflow-hidden rounded-t-[inherit]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={avatar(a.id)} alt="" className="size-[92px] rounded-2xl border-2 object-cover" style={{ borderColor: a.color }} />
-        <div>
+        <img key={a.id} src={portrait(a.id)} alt={a.name} className="agent-hero size-full object-cover object-[50%_22%]" />
+        <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(16,8,36,.96))" }} />
+        <div className="absolute inset-x-[18px] bottom-3">
           <span className="wave">{a.district}</span>
-          <h3 className="mt-1.5 font-sign text-[26px] font-normal uppercase leading-none">{a.name}</h3>
-          <p className="mt-1 text-sun">{a.role}</p>
+          <h3 className="mt-1.5 font-sign text-[30px] font-normal uppercase leading-none" style={{ textShadow: `0 0 18px ${a.color}` }}>{a.name}</h3>
+          <p className="mt-1" style={{ color: a.color }}>{a.role}</p>
         </div>
       </div>
       <p className="mt-3 leading-[1.5] text-haze">{a.bio}</p>
