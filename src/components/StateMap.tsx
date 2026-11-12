@@ -20,7 +20,7 @@ import { Island, LAND_Y } from "./map/Island";
 import { ClipBoard } from "./map/ClipBoards";
 import { RealCity } from "./map/RealCity";
 void RealCity;
-import { districtOf } from "./map/districts";
+import { districtOf, DISTRICTS } from "./map/districts";
 
 // ---- Yanis V16 GTA VI community map (gtadb.org, CC BY 4.0), island crop stitched from the z5 tiles: 6118×8192 ----
 const IMG_W = 14848, IMG_H = 20224; // Yanis V17 island crop: tiles x 21..78, y 21..99 (ground textures keep this aspect)
@@ -146,7 +146,8 @@ function Controls({ entities, selected, api, onWorld }: { entities: Entity[]; se
   // menu cards on a page that already shows the map: fly there instead of reloading
   useEffect(() => {
     const fly = (e: Event) => {
-      const at = PLACES[(e as CustomEvent<string>).detail]; if (!at || MIAMI) return;
+      const k = (e as CustomEvent<string>).detail, dd = DISTRICTS.find((x) => x.name === k);
+      const at = PLACES[k] ?? (dd ? { u: dd.u, v: dd.v, h: 3.2 } : undefined); if (!at || MIAMI) return;
       const [ax, , az] = toWorld(at.u, at.v);
       const t0 = controls.target.clone(), p0 = camera.position.clone();
       const t1 = new THREE.Vector3(ax, LAND_Y, az), p1 = new THREE.Vector3(ax, LAND_Y + at.h, az + at.h * 0.62);

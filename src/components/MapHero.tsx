@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { BRAND, OFFICIAL_MINT } from "@/lib/brand";
 import dynamic from "next/dynamic";
 import { AgentRail } from "./AgentRail";
+import { MoneyFlow } from "./MoneyFlow";
 import { AgentDrawer } from "./AgentDrawer";
 import { agentAsCoin, useTown } from "./town";
 const StateMap = dynamic(() => import("./StateMap").then((m) => m.StateMap), { ssr: false, loading: () => <MapPoster /> });
@@ -46,7 +47,7 @@ export function MapHero() {
           <p className="script">Welcome to the</p>
           <h1 className="font-sign text-[64px] uppercase leading-[.92] max-md:text-[50px]">
             <span className="sunset-text block" style={{ filter: "drop-shadow(0 4px 22px rgba(255,61,139,.45))" }}>{BRAND.state}</span>
-            <span className="block">Lowlifes</span>
+            <span className="block">Agents</span>
           </h1>
           <p className="mb-3.5 mt-2.5 text-[16px] text-haze">{lead}. <span className="text-ink">{tail}</span></p>
           <div className="grid grid-cols-2 gap-2.5">
@@ -56,6 +57,7 @@ export function MapHero() {
           <p className="mt-3 text-[13px] leading-[1.45] text-haze">{paper
             ? <>Real prices from Robinhood Chain. <span className="text-sun">Paper trading</span> until their wallets are funded.</>
             : <>Trading <span className="text-up">for real</span> from their own wallets on Robinhood Chain.</>}</p>
+          <MoneyFlow onFly={(d) => dispatchEvent(new CustomEvent("clip:fly", { detail: d }))} />
           <div className="mt-2.5 flex gap-2.5">
             {OFFICIAL_MINT
               ? <a href={`https://pons.fun/token/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-hot flex-1">Buy ${BRAND.ticker}</a>

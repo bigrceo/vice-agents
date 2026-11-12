@@ -10,7 +10,7 @@ export type AgentView = {
 };
 export type TownEvent = { id: number; agent: string; kind: "thought" | "say" | "move" | "trade"; text: string; to: string | null; district: string; at: string };
 export type AgentTrade = { id: number; agent: string; side: "buy" | "sell"; symbol: string; kind: string; token: string; qty: number; price: number; eth: number; reason: string; mode: string; tx: string | null; at: string };
-export type Town = { agents: AgentView[]; events: TownEvent[]; trades: AgentTrade[]; ethUsd: number; prices: { symbol: string; kind: string; token: string; price: number; change: number; mcapUsd: number }[] };
+export type Town = { agents: AgentView[]; events: TownEvent[]; trades: AgentTrade[]; ethUsd: number; prices: { symbol: string; kind: string; token: string; price: number; change: number; mcapUsd: number; fresh: boolean }[] };
 
 export const START_ETH = 0.05;
 export const MIN_REAL_ETH = 0.01;
@@ -48,7 +48,7 @@ async function load(): Promise<Town> {
   });
   return {
     agents, ethUsd: Number(meta[0]?.v ?? 0),
-    prices: prices.map((p: any) => ({ symbol: p.symbol, kind: p.kind, token: p.token, price: p.price, change: p.open ? (p.price / p.open - 1) * 100 : 0, mcapUsd: p.mcap_usd })),
+    prices: prices.map((p: any) => ({ symbol: p.symbol, kind: p.kind, token: p.token, price: p.price, change: p.open ? (p.price / p.open - 1) * 100 : 0, mcapUsd: p.mcap_usd, fresh: !!p.fresh })),
     events: events.map((e: any) => ({ id: Number(e.id), agent: e.agent_id, kind: e.kind, text: e.text, to: e.to_agent, district: e.district, at: new Date(e.at).toISOString() })),
     trades: trades.map((t: any) => ({ id: Number(t.id), agent: t.agent_id, side: t.side, symbol: t.symbol, kind: t.kind, token: t.token, qty: t.qty, price: t.price, eth: t.eth, reason: t.reason, mode: t.mode, tx: t.tx, at: new Date(t.at).toISOString() })),
   };

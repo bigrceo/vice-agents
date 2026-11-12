@@ -7,6 +7,7 @@ import postgres from "postgres";
 import { mnemonicToAccount } from "viem/accounts";
 import { createWalletClient, formatEther, http, parseEther, type Address, type Hex } from "viem";
 import { CAST, type Agent } from "../src/lib/agents/cast";
+import { SECTORS, sectorOf } from "../src/lib/agents/sectors";
 import { DISTRICTS } from "../src/components/map/districts";
 import { STOCKS, bestRoute } from "../src/lib/stocks/route";
 import { client, robinhood, ZERO } from "../src/lib/stocks/chain";
@@ -37,6 +38,7 @@ async function schema() {
   await sql`create table if not exists la_prices (symbol text primary key, kind text, token text, name text, price double precision, open double precision, mcap_usd double precision, updated_at timestamptz default now())`;
   await sql`create table if not exists la_meta (k text primary key, v text)`;
   await sql`alter table la_prices add column if not exists liq double precision`;
+  await sql`alter table la_prices add column if not exists fresh boolean default false`;
   for (const a of CAST) {
     const d = DISTRICTS.find((x) => x.name === a.home)!;
     await sql`insert into la_agents (id, address, u, v, tu, tv, district, cash) values (${a.id}, ${account(a).address}, ${d.u}, ${d.v}, ${d.u}, ${d.v}, ${a.home}, ${START_ETH}) on conflict (id) do update set address = excluded.address`;
@@ -44,7 +46,7 @@ async function schema() {
 }
 
 // ---------------- prices ----------------
-type Px = { symbol: string; kind: "stock" | "pons"; token: string; name: string; price: number; mcapUsd: number; liq: number };
+type Px = { symbol: string; kind: "stock" | "pons"; token: string; name: string; price: number; mcapUsd: number; liq: number; fresh?: boolean };
 /** Paper fills move the price like a constant-product pool of `liq` ETH would: no free exits from thin coins. */
 const fillIn = (eth: number, x: Px) => (eth / x.price) * (x.liq / (x.liq + eth));
 const fillOut = (qty: number, x: Px) => { const v = qty * x.price; return v * (x.liq / (x.liq + v)); };
@@ -71,43 +73,36 @@ async function ponsPrices() {
     ponsCache = { at: Date.now(), list: [...new Set((logs as any[]).map((l) => l.args.token as Address))].slice(-250) };
   }
   const ms = await Promise.all(ponsCache.list.map((t) => getMarket(t).catch(() => null)));
-  return ms.filter((m) => m && m.mcapUsd && m.liquidityEth > 0.2 && String(m.symbol ?? "").replace(/[^A-Za-z0-9]/g, ""))
-    .sort((a, b) => b!.mcapUsd! - a!.mcapUsd!).slice(0, 8)
-    .map((m) => ({ symbol: String(m!.symbol).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), kind: "pons" as const, token: m!.token, name: m!.name ?? "", price: m!.priceEth, mcapUsd: m!.mcapUsd!, liq: m!.liquidityEth }))
+  const ok = ms.filter((m) => m && m.mcapUsd && String(m.symbol ?? "").replace(/[^A-Za-z0-9]/g, ""));
+  // the trenches: the biggest live coins, plus the freshest launches that already have a real pool behind them
+  const top = ok.filter((m) => m!.liquidityEth > 0.2).sort((a, b) => b!.mcapUsd! - a!.mcapUsd!).slice(0, 6);
+  const fresh = ok.slice(-60).reverse().filter((m) => m!.liquidityEth > 0.08 && !top.includes(m)).slice(0, 4);
+  return [...top.map((m) => [m, false] as const), ...fresh.map((m) => [m, true] as const)]
+    .map(([m, f]) => ({ symbol: String(m!.symbol).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), kind: "pons" as const, token: m!.token, name: m!.name ?? "", price: m!.priceEth, mcapUsd: m!.mcapUsd!, liq: m!.liquidityEth, fresh: f }))
     // two Pons coins can share a ticker: the symbol becomes unique by address, so a bag is always priced by its own token
     .map((x, _, all) => all.some((y) => y.symbol === x.symbol && y.token !== x.token) ? { ...x, symbol: `${x.symbol}${x.token.slice(-3).toUpperCase()}` } : x);
 }
 
-async function refreshPrices() {
-  const [s, p, e] = await Promise.all([stockPrices(), ponsPrices().catch((err) => { console.error("pons", err.message); return []; }), ethUsd()]);
-  if (e) ETH_USD = e.price;
-  const all = [...s, ...p];
-  if (!all.length) return;
-  // keep coins agents already hold, even if they fell out of the top 8
-  const held = await sql`select distinct symbol, kind, token from la_positions where qty > 0 and kind = 'pons'`;
-  for (const h of held) if (!all.some((x) => x.symbol === h.symbol)) {
-    const m = await getMarket(h.token).catch(() => null);
-    if (m) all.push({ symbol: h.symbol, kind: "pons", token: h.token, name: m.name ?? "", price: m.priceEth, mcapUsd: m.mcapUsd ?? 0, liq: m.liquidityEth });
-  }
-  PX = new Map(all.map((x) => [x.symbol, x]));
-  for (const x of all) await sql`insert into la_prices (symbol, kind, token, name, price, open, mcap_usd, liq) values (${x.symbol}, ${x.kind}, ${x.token}, ${x.name}, ${x.price}, ${x.price}, ${x.mcapUsd}, ${x.liq})
-    on conflict (symbol) do update set price = excluded.price, mcap_usd = excluded.mcap_usd, liq = excluded.liq, token = excluded.token, updated_at = now()`;
-  await sql`insert into la_meta (k, v) values ('eth_usd', ${String(ETH_USD)}) on conflict (k) do update set v = excluded.v`;
-  console.log(`prices: ${s.length} stocks, ${p.length} pons, ETH $${ETH_USD.toFixed(0)}`);
+/** Where an agent goes next: mostly the district of something it holds (the map shows where the money sits), else one of its spots. */
+async function nextStop(a: Agent) {
+  const held = await sql`select symbol, kind from la_positions where agent_id = ${a.id} and qty > 0`;
+  if (held.length && Math.random() < 0.65) { const h = held[Math.floor(Math.random() * held.length)]; return sectorOf(h.symbol, h.kind).district; }
+  return a.haunts[Math.floor(Math.random() * a.haunts.length)];
+}
+async function goTo(a: Agent, to: string, why: string) {
+  const d = DISTRICTS.find((x) => x.name === to); if (!d) return;
+  await sql`update la_agents set tu = ${d.u + (Math.random() - 0.5) * 0.012}, tv = ${d.v + (Math.random() - 0.5) * 0.012}, district = ${to} where id = ${a.id}`;
+  await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'move', ${why}, ${to})`;
 }
 
-// ---------------- movement ----------------
 async function walk() {
   const rows = await sql`select id, u, v, tu, tv, district from la_agents`;
   for (const r of rows) {
     // between thoughts they roam their usual spots, so the map is never still
     const a = CAST.find((c) => c.id === r.id)!;
     if (Math.hypot(r.tu - r.u, r.tv - r.v) < 0.004 && Math.random() < 0.035) {
-      const to = a.haunts[Math.floor(Math.random() * a.haunts.length)];
-      const d = DISTRICTS.find((x) => x.name === to)!;
-      r.tu = d.u + (Math.random() - 0.5) * 0.012; r.tv = d.v + (Math.random() - 0.5) * 0.012;
-      await sql`update la_agents set tu = ${r.tu}, tv = ${r.tv}, district = ${to} where id = ${r.id}`;
-      if (to !== r.district) await sql`insert into la_events (agent_id, kind, text, district) values (${r.id}, 'move', ${`heads to ${to}`}, ${to})`;
+      const to = await nextStop(a);
+      if (to !== r.district) { const sec = SECTORS.find((x) => x.district === to); await goTo(a, to, `heads to ${to}${sec ? ` (${sec.name.toLowerCase()})` : ""}`); continue; }
     }
     const dx = r.tu - r.u, dv = r.tv - r.v, d = Math.hypot(dx, dv);
     let u = r.u, v = r.v;
@@ -147,14 +142,18 @@ async function think(a: Agent) {
   const near = others.filter((o) => o.district === me.district).map((o) => o.id);
   const heard = await sql`select agent_id, kind, text, to_agent from la_events where kind in ('say','trade') and at > now() - interval '15 minutes' order by id desc limit 8`;
   const opens = new Map((await sql`select symbol, open from la_prices`).map((r) => [r.symbol, r.open]));
-  const market = [...PX.values()].map((x) => `${x.symbol} (${x.kind === "pons" ? "Pons coin" + (x.mcapUsd ? ` mcap $${Math.round(x.mcapUsd / 1000)}k` : "") : "stock"}) ${fmt(x.price)} ETH, ${(((x.price / (opens.get(x.symbol) || x.price)) - 1) * 100).toFixed(1)}% since tracked`).join("\n");
+  const market = SECTORS.map((sec) => {
+    const rows = [...PX.values()].filter((x) => sectorOf(x.symbol, x.kind).id === sec.id);
+    return rows.length ? `${sec.name} (district ${sec.district}):\n` + rows.map((x) => `  ${x.symbol}${x.fresh ? " FRESH LAUNCH" : ""}${x.kind === "pons" ? ` mcap $${Math.round(x.mcapUsd / 1000)}k, pool ${x.liq.toFixed(2)} ETH` : ""} ${fmt(x.price)} ETH, ${(((x.price / (opens.get(x.symbol) || x.price)) - 1) * 100).toFixed(1)}% since tracked`).join("\n") : "";
+  }).filter(Boolean).join("\n");
   const book = pos.map((p) => { const px = PX.get(p.symbol)?.price ?? 0; return `${p.symbol}: ${fmt(p.qty)} units, cost ${fmt(p.cost)} ETH, now ${fmt(p.qty * px)} ETH`; }).join("\n") || "nothing";
   const names = Object.fromEntries(CAST.map((c) => [c.id, c.name]));
   const system = `You are ${a.name}, ${a.role} in Leonida (a Florida-like state: Vice City, the Keys, swamps). ${a.persona}
-You live on a map and trade real tokenized stocks and Pons memecoins on Robinhood Chain. Style: ${a.style}. Favourite names: ${a.likes.join(", ")} (PONS = any Pons memecoin).
+You live on a map and trade real tokenized stocks and Pons memecoins on Robinhood Chain. The map is the market: ${SECTORS.map((x) => `${x.district} = ${x.name.toLowerCase()}`).join(", ")}. You walk to the district of what you trade.
+The trenches matter most: fresh Pons launches are where a sharp call gets noticed, but thin pools punish size. Style: ${a.style}. Favourite names: ${a.likes.join(", ")} (PONS = any Pons memecoin).
 Stay in character, English, short and punchy, no hashtags, no emojis. Never mention being an AI. Never say GTA or Rockstar.
 Answer ONLY JSON: {"thought": "<inner thought, max 140 chars>", "say": {"to": "<agent id or null>", "text": "<line said out loud, max 140 chars>"} | null,
-"move_to": "<one of: ${a.haunts.join(", ")}> | null", "trade": {"side": "buy"|"sell", "symbol": "<symbol from the market list>", "pct": <1-60, % of cash for buys or % of position for sells>, "reason": "<why, in character, max 160 chars>"} | null}
+"move_to": "<one of: ${[...new Set([...a.haunts, ...SECTORS.map((x) => x.district)])].join(", ")}> | null", "trade": {"side": "buy"|"sell", "symbol": "<symbol from the market list>", "pct": <1-60, % of cash for buys or % of position for sells>, "reason": "<why, in character, max 160 chars>"} | null}
 Trade at most when it makes sense for you; holding is fine. Agent ids: ${CAST.filter((c) => c.id !== a.id).map((c) => `${c.id}=${c.name} (${c.role})`).join(", ")}.`;
   const user = `You are in ${me.district}. Nearby: ${near.map((n) => names[n]).join(", ") || "nobody"}.
 Cash: ${fmt(me.cash)} ETH (ETH = $${ETH_USD.toFixed(0)}). Holdings:\n${book}
@@ -167,11 +166,7 @@ Recently heard in town:\n${heard.reverse().map((h) => `${names[h.agent_id]}${h.t
     const to = CAST.some((c) => c.id === out.say.to) ? out.say.to : null;
     await sql`insert into la_events (agent_id, kind, text, to_agent, district) values (${a.id}, 'say', ${String(out.say.text).slice(0, 200)}, ${to}, ${me.district})`;
   }
-  if (out.move_to && a.haunts.includes(out.move_to) && out.move_to !== me.district) {
-    const d = DISTRICTS.find((x) => x.name === out.move_to)!;
-    await sql`update la_agents set tu = ${d.u + (Math.random() - 0.5) * 0.01}, tv = ${d.v + (Math.random() - 0.5) * 0.01}, district = ${d.name} where id = ${a.id}`;
-    await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'move', ${`heads to ${d.name}`}, ${d.name})`;
-  }
+  if (out.move_to && out.move_to !== me.district && !out.trade?.symbol && DISTRICTS.some((x) => x.name === out.move_to)) await goTo(a, out.move_to, `heads to ${out.move_to}`);
   await sql`update la_agents set thought = ${String(out.thought ?? "").slice(0, 200)} where id = ${a.id}`;
   if (out.trade?.symbol) await trade(a, me, pos, out.trade).catch((e) => console.error(a.id, "trade", e.message));
 }
@@ -204,6 +199,8 @@ async function trade(a: Agent, me: any, pos: any[], t: { side: string; symbol: s
   await sql`insert into la_trades (agent_id, side, symbol, kind, token, qty, price, eth, reason, mode, tx) values (${a.id}, ${t.side}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${eth / qty}, ${eth}, ${String(t.reason ?? "").slice(0, 220)}, ${mode}, ${tx})`;
   await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'trade', ${`${t.side === "buy" ? "bought" : "sold"} ${eth.toFixed(4)} ETH of $${sym}: ${String(t.reason ?? "").slice(0, 160)}`}, ${me.district})`;
   await sql`update la_agents set mode = ${mode} where id = ${a.id}`;
+  const sec = sectorOf(sym, px.kind);
+  if (sec.district !== me.district) await goTo(a, sec.district, `heads to ${sec.district} (${sec.name.toLowerCase()}) to ${t.side} $${sym}`);
   console.log(`${a.id} ${mode} ${t.side} ${sym} ${eth.toFixed(4)} ETH`);
 }
 

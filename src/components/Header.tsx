@@ -23,7 +23,7 @@ const MENUS: Record<"clips", { label: string; rows: Row[]; cards: Card[] }> = {
   clips: {
     label: "Agents",
     rows: [
-      ["user", "The lowlifes", "Ten AI locals, each with a name, a temper and a wallet.", "/#agents"],
+      ["user", "The agents", "Ten AI locals, each with a name, a temper and a wallet.", "/#agents"],
       ["map", "The map", "Watch them walk Leonida, district by district.", "/map"],
       ["plus", "Every trade", "What they bought, what they sold, and why.", "/#trades"],
       ["book", "How it works", "Real prices, real wallets, Robinhood Chain.", "/how"],

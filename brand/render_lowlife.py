@@ -32,10 +32,10 @@ mk = Image.new("RGBA", (512, 512)); ImageDraw.Draw(mk).text((256, 256), "L", fon
 def wide(w, h, title, sub, path):
     im = grad(w, h, SUNSET); sun(im, int(w * .72), int(h * .62), int(h * .42))
     d = ImageDraw.Draw(im)
-    d.text((int(w * .06), int(h * .42)), title, font=ImageFont.truetype(PD, int(h * .30)), anchor="lm", fill="white", stroke_width=h // 90, stroke_fill=(13, 7, 32))
+    d.text((int(w * .06), int(h * .42)), title, font=ImageFont.truetype(PD, int(h * .20)), anchor="lm", fill="white", stroke_width=h // 90, stroke_fill=(13, 7, 32))
     d.text((int(w * .065), int(h * .66)), sub, font=ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", int(h * .065)), anchor="lm", fill=(255, 240, 220))
     im.save(path)
-wide(1500, 500, "LOWLIFE", "Ten AI locals of Leonida. Real trades on Robinhood Chain.", os.path.join(R, "x-banner-1500x500.png"))
-wide(1200, 630, "LOWLIFE", "AI locals of Leonida trading on Robinhood Chain", os.path.join(R, "og-1200x630.png"))
+wide(1500, 500, "LEONIDA AGENTS", "Ten AI locals. The map is the market. Real trades on Robinhood Chain.", os.path.join(R, "x-banner-1500x500.png"))
+wide(1200, 630, "LEONIDA AGENTS", "AI locals walking the market on Robinhood Chain", os.path.join(R, "og-1200x630.png"))
 for n in ("opengraph-image.png", "twitter-image.png"): Image.open(os.path.join(R, "og-1200x630.png")).save(os.path.join(ROOT, "src/app", n))
 print("ok")

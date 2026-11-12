@@ -1,24 +1,21 @@
-# LOWLIFE — kit de lancement
+# Leonida Agents — kit de lancement
 
-Prod : https://lowlife-rh.vercel.app (Vercel `lowlife-rh`) · boucle des agents : Railway projet `leonida-agents`, service `agents` (+ Postgres).
+Prod : https://leonida-agents.vercel.app (Vercel `lowlife-rh`) · boucle des agents : Railway projet `leonida-agents`, service `agents` (+ Postgres).
 
-## Marque (3 noms, sans « GTA »)
+## Marque
 
-| Nom | Domaine (libre au whois du 11/11) | Handle X |
-|---|---|---|
-| **LOWLIFE** (choisi, câblé dans le site) | **lowlife.fun** | @lowlifefun |
-| Vice Desk | vicedesk.fun | @vicedeskfun |
-| Palm Street | palmstreet.fun | @palmstreetfun |
-
-Aussi libre : lowlifecapital.com. Ticker : **$LOWLIFE** (vérif. sur les 730 245 lancements Pons : voir la fin du fichier).
+- **Nom : Leonida Agents** (choisi par Rayane le 12/11). Domaines libres au whois : **leonidaagents.com**, leonidaagents.fun, leonida-agents.fun.
+- **Handle X :** @leonidaagents (à vérifier en créant le compte).
+- **Ticker : $LEONIDA**, à confirmer par le scan Pons (`ticker.log`). Plan B : $LAGENTS.
+- Le sens du produit : **la map, c'est le marché.** Chaque quartier est un secteur (Vice City = les trenches Pons, Rialto Islands = la tech, Port Gellhorn = pétrole et or, Key Lento = les indices, Leaf Links = old money). Les agents marchent vers ce qu'ils tradent, chassent les nouveaux coins Pons, et **le coin est la caisse de la ville** : les frais créateur financent leurs wallets, une part des gains rachète le coin, et les holders votent.
 
 ## Profil X (à copier)
 
-- **Nom :** LOWLIFE
-- **Handle :** @lowlifefun
-- **Bio :** Ten AI locals live in Leonida. A dealer, a cop, a fired trader, an influencer. They walk the map, talk, and trade real assets on Robinhood Chain.
+- **Nom :** Leonida Agents
+- **Handle :** @leonidaagents
+- **Bio :** Ten AI locals walk Leonida and trade real stocks and Pons coins from their own wallets. The map is the market. Holders own the gang.
 - **Lieu :** Vice City, Leonida
-- **Site :** lowlife.fun (en attendant : lowlife-rh.vercel.app)
+- **Site :** leonidaagents.com (en attendant : leonida-agents.vercel.app)
 - **Avatar :** `brand/pfp-1000.png` · **Bannière :** `brand/x-banner-1500x500.png`
 
 ## Calendrier de chauffe (3 jours, sans ticker ni CA)
@@ -52,7 +49,7 @@ Images dans `brand/x-posts/`. Heures indicatives (heure de Paris).
    > "Oil's cheap and the gator's patient." — Hollis, airboat captain
 4. **22h** · `never-sleep.jpg`
    > Leonida sleeps. The locals don't.
-   > lowlife.fun
+   > leonidaagents.com
 
 ### Jour 3 — le classement
 1. **13h** · `leaderboard.jpg`
@@ -71,27 +68,29 @@ Règles : pas de ticker ni CA, pas de « GTA » dans le nom ou le handle, pas de
 
 ## Ce soir : post vidéo (premier post du compte)
 
-Vidéo : `brand/video/lowlife-live-18s.mp4` (18 s, sans son, 1600×900, filmée sur la prod : les agents bougent dans Leonida, bulles de dialogue, puis la fiche de Kiki avec son trade et sa raison).
+Vidéo : `brand/video/leonida-agents-18s.mp4` (18 s, sans son, 1600×900, filmée sur la prod : les agents bougent dans Leonida, bulles de dialogue, puis la fiche de Kiki avec son trade et sa raison).
 
 > Ten AI locals just moved into Leonida.
-> A dealer, a cop, a fired Wall Street trader, an influencer.
-> They walk the map, talk trash, and trade. Every trade comes with a reason.
-> Watch them live: lowlife-rh.vercel.app
+> The map is the market: Vice City is the trenches, Rialto is tech, the port is oil and gold.
+> They walk to what they trade, and every trade comes with a reason.
+> Watch them live: leonida-agents.vercel.app
 
 ## Demain matin : kit Pons
 
-- **Nom :** LOWLIFE
-- **Ticker :** LOWLIFE (scan Pons : voir ci-dessous)
-- **Description :** Ten AI locals live in Leonida and trade tokenized stocks and Pons coins from their own wallets on Robinhood Chain. Every trade comes with a reason. lowlife.fun
+- **Nom :** Leonida Agents
+- **Ticker :** LEONIDA (si le scan le confirme libre)
+- **Description :** Ten AI locals live in Leonida and trade tokenized stocks and Pons coins from their own wallets on Robinhood Chain. Every trade comes with a reason. leonidaagents.com
 - **Image :** `brand/pons-token-1000.png`
-- **Site :** https://lowlife-rh.vercel.app · **X :** https://x.com/lowlifefun
+- **Site :** https://leonida-agents.vercel.app · **X :** https://x.com/leonidaagents
+
+**Important au lancement :** sur Pons, mettre le destinataire des frais créateur sur le wallet de la caisse des agents (sinon la promesse « le coin paie la ville » n'est pas tenue). Je peux créer ce wallet de caisse.
 
 ## Tweet LIVE (CA à coller)
 
-> $LOWLIFE is live on Pons.
-> Ten AI locals, ten wallets, real trades on Robinhood Chain.
+> $LEONIDA is live on Pons.
+> Ten AI locals, ten wallets, real trades on Robinhood Chain. Creator fees fund the gang.
 > CA: 0x________________________________________
-> Watch them: lowlife-rh.vercel.app
+> Watch them: leonida-agents.vercel.app
 
 ## Trade réel de preuve
 

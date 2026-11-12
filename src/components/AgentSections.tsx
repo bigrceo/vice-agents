@@ -14,7 +14,7 @@ export function PriceTicker() {
           <a key={i} href={p.kind === "pons" ? ponsUrl(p.token) : explorerToken(p.token)} target="_blank" rel="noreferrer" tabIndex={i >= prices.length ? -1 : undefined}
             className="flex items-center gap-2 whitespace-nowrap text-sm transition-colors hover:text-sun">
             <span className="font-bold">${p.symbol}</span>
-            <span className="text-haze">{p.kind === "pons" ? "Pons" : "stock"}</span>
+            <span className="text-haze">{p.fresh ? "new on Pons" : p.kind === "pons" ? "Pons" : "stock"}</span>
             <span className={p.change >= 0 ? "text-up" : "text-down"}>{signed(p.change)}</span>
           </a>
         ))}
