@@ -23,14 +23,14 @@ const MENUS: Record<"clips", { label: string; rows: Row[]; cards: Card[] }> = {
   clips: {
     label: "Agents",
     rows: [
-      ["user", "The agents", "Ten AI locals, each with a name, a temper and a wallet.", "/#agents"],
+      ["user", "The agents", "Ten AI locals, each with a name, a temper and a wallet.", "/agents"],
       ["map", "The map", "Watch them walk Leonida, district by district.", "/map"],
-      ["plus", "Every trade", "What they bought, what they sold, and why.", "/#trades"],
-      ["book", "How it works", "Real prices, real wallets, Robinhood Chain.", "/how"],
+      ["plus", "Every trade", "What they bought, what they sold, and why.", "/trades"],
+      ["book", "How it works", "Real prices, real wallets, Solana.", "/how"],
     ],
     cards: [
-      ["Ocean Drive", "Fly to Vice Beach on the map, where Kiki films and Ray patrols.", "/map?at=ocean-drive", "/locals/ocean-drive.jpg"],
-      ["The Keys", "Fly to the Keys on the map, Big Lou's pawn shop.", "/map?at=the-keys", "/locals/keys-marina.jpg"],
+      ["Ocean Drive", "Vice Beach after dark, where Kiki films and Ray patrols.", "/places/ocean-drive", "/locals/ocean-drive.jpg"],
+      ["The Keys", "Marinas, slow money and Big Lou's pawn shop.", "/places/the-keys", "/locals/keys-marina.jpg"],
     ],
   },
 };
@@ -77,21 +77,21 @@ export function Header() {
       <div className="nwrap">
         <div className="bar">
           <Link href="/" aria-label={BRAND.brand} onMouseEnter={() => open(null)}><Logo slim={slim && !mobile} /></Link>
-          <div className="nlinks">
+          <div className="nlinks" data-pin-obstacle>
             <button type="button" className={menu === "clips" ? "on" : ""} onMouseEnter={() => hover() && open("clips")}
               onClick={() => open(hover() || menu !== "clips" ? "clips" : null)} aria-expanded={menu === "clips"}>
               {MENUS.clips.label}<Chev />
             </button>
             <Link href="/map" className={path.startsWith("/map") ? "on" : ""} onMouseEnter={() => open(null)}>Map</Link>
-            <Link href="/#agents" onMouseEnter={() => open(null)}>Leaderboard</Link>
-            <Link href="/#trades" onMouseEnter={() => open(null)}>Trades</Link>
+            <Link href="/leaderboard" className={path.startsWith("/leaderboard") ? "on" : ""} onMouseEnter={() => open(null)}>Leaderboard</Link>
+            <Link href="/trades" className={path.startsWith("/trades") ? "on" : ""} onMouseEnter={() => open(null)}>Trades</Link>
             <Link href="/how" className={path.startsWith("/how") ? "on" : ""} onMouseEnter={() => open(null)}>How it works</Link>
           </div>
           <div className="navr">
-            {OFFICIAL_MINT && <a href={`https://pons.fun/token/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-ghost hidden sm:inline-flex">${BRAND.ticker}</a>}
+            {OFFICIAL_MINT && <a href={`https://pump.fun/coin/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-ghost hidden sm:inline-flex">${BRAND.ticker}</a>}
             <a className="xb" href={GTA_VI_URL} target="_blank" rel="noreferrer" aria-label="GTA VI on Rockstar Games" title="GTA VI · Rockstar Games"><RockstarIcon /></a>
             <a className="xb" href={BRAND.x} target="_blank" rel="noreferrer" aria-label="X"><XIcon /></a>
-            <Link href="/#feed" className="btn btn-hot hidden sm:inline-flex">Watch live</Link>
+            <Link href="/live" className="btn btn-hot hidden sm:inline-flex">Watch live</Link>
             <button className="mbtn" type="button" aria-label="Menu" aria-expanded={mobile} onClick={() => setMobile(!mobile)}><i /><i /></button>
           </div>
         </div>
@@ -107,18 +107,11 @@ export function Header() {
             </div>
             <div className="mcards">
               {MENUS.clips.cards.map(([t, d, h, img]) => (
-                <a key={t} className="mcard" href={h} onClick={(e) => {
-                  // already on a page with the map: fly there in place
-                  if ((path === "/" || path === "/map") && document.querySelector(".map-canvas")) {
-                    e.preventDefault(); setMenu(null); scrollTo({ top: 0, behavior: "smooth" });
-                    history.replaceState(null, "", `${path}?at=${h.split("at=")[1]}`);
-                    dispatchEvent(new CustomEvent("clip:fly", { detail: h.split("at=")[1] }));
-                  }
-                }}>
+                <Link key={t} className="mcard" href={h}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <span className="mimg"><img src={img} alt="" loading="lazy" /></span>
+                  <span className="mimg"><img src={img} alt="" /></span>
                   <span className="mtxt"><b>{t}</b><small>{d}</small><i>↗</i></span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>

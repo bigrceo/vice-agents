@@ -206,7 +206,8 @@ export function DistrictLabels({ toWorld }: { toWorld: (u: number, v: number) =>
       const [lx, ty] = px(v.copy(c.position).addScaledVector(right, -half).addScaledVector(up, halfH));
       const [rx, by] = px(v.copy(c.position).addScaledVector(right, half).addScaledVector(up, -halfH));
       const onScreen = lx > 8 && rx < size.width - 8 && ty > 70 && by < size.height - (size.width >= 768 ? 210 : 8);   // keep clear of the navbar and of the fade into the page
-      const hidden = !onScreen || rects.current.list.some((r) => lx < r.r && rx > r.l && ty < r.b && by > r.t);
+      const pins = (window as unknown as { __pinRects?: { x: number; y: number; w: number; h: number }[] }).__pinRects ?? [];
+      const hidden = !onScreen || rects.current.list.some((r) => lx < r.r && rx > r.l && ty < r.b && by > r.t) || pins.some((p) => lx < p.x + p.w && rx > p.x && ty < p.y + p.h && by > p.y);
       const edge = hidden ? 0 : 1;
       const target = z * edge;
       m.opacity += (target - m.opacity) * Math.min(1, dt * 10);

@@ -1,4 +1,5 @@
 "use client";
+import { AssetLogo } from "./AssetLogo";
 import { EXPLORER } from "@/lib/brand";
 import { useTown, portrait, eth, signed, ago } from "./town";
 
@@ -28,9 +29,9 @@ export function AgentDrawer({ id, onClose }: { id: string; onClose: () => void }
         ))}
       </dl>
       {a.positions.length > 0 && <div className="mb-3"><p className="label mb-1.5">Holding</p>
-        <ul className="space-y-1 text-[13px]">{a.positions.map((p) => <li key={p.symbol} className="flex justify-between"><span><b>${p.symbol}</b> <span className="text-haze">{p.kind === "pons" ? "Pons" : "stock"}</span></span><span>{eth(p.value)} <span className={p.pnlPct >= 0 ? "text-up" : "text-down"}>{signed(p.pnlPct)}</span></span></li>)}</ul></div>}
+        <ul className="space-y-1 text-[13px]">{a.positions.map((p) => <li key={p.symbol} className="flex justify-between"><span><AssetLogo a={p} size={20} className="asset-logo-sm" /><b>${p.symbol}</b> <span className="text-haze">{p.kind === "pump" ? "pump.fun" : "xStock"}</span></span><span>{eth(p.value)} <span className={p.pnlPct >= 0 ? "text-up" : "text-down"}>{signed(p.pnlPct)}</span></span></li>)}</ul></div>}
       {mine.length > 0 && <div className="mb-3"><p className="label mb-1.5">Last trades</p>
-        <ul className="space-y-2 text-[13px]">{mine.map((t) => <li key={t.id}><b className={t.side === "buy" ? "text-up" : "text-down"}>{t.side === "buy" ? "Bought" : "Sold"} ${t.symbol}</b> <span className="text-haze">{eth(t.eth)} · {ago(t.at)}</span><span className="block text-haze">{t.reason}</span></li>)}</ul></div>}
+        <ul className="space-y-2 text-[13px]">{mine.map((t) => <li key={t.id}><b className={t.side === "buy" ? "text-up" : "text-down"}>{t.side === "buy" ? "Bought" : "Sold"} <AssetLogo a={t} size={18} className="asset-logo-sm" />${t.symbol}</b> <span className="text-haze">{eth(t.eth)} · {ago(t.at)}</span><span className="block text-haze">{t.reason}</span></li>)}</ul></div>}
       {a.address && <a href={`${EXPLORER}/address/${a.address}`} target="_blank" rel="noreferrer" className="btn btn-ghost w-full">Wallet {a.address.slice(0, 6)}…{a.address.slice(-4)}</a>}
     </div>
   );

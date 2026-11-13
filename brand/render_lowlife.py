@@ -23,19 +23,19 @@ def sun(im, cx, cy, r):
 def tile(n):
     im = grad(n, n, SUNSET); sun(im, n // 2, int(n * .56), int(n * .33))
     f = ImageFont.truetype(PD, int(n * .78)); d = ImageDraw.Draw(im)
-    d.text((n // 2, int(n * .5)), "L", font=f, anchor="mm", fill="white", stroke_width=max(2, n // 40), stroke_fill=(13, 7, 32))
+    d.text((n // 2, int(n * .5)), "V", font=f, anchor="mm", fill="white", stroke_width=max(2, n // 40), stroke_fill=(13, 7, 32))
     m = Image.new("L", (n, n), 0); ImageDraw.Draw(m).rounded_rectangle((0, 0, n - 1, n - 1), radius=n // 5, fill=255)
     out = Image.new("RGBA", (n, n)); out.paste(im, (0, 0), m); return out
 tile(1000).save(os.path.join(R, "pfp-1000.png")); tile(512).save(os.path.join(ROOT, "public/brand/pfp-512.png"))
 t = tile(512).convert("RGB"); t.resize((256, 256)).save(os.path.join(ROOT, "src/app/icon.png")); t.resize((180, 180)).save(os.path.join(ROOT, "src/app/apple-icon.png"))
-mk = Image.new("RGBA", (512, 512)); ImageDraw.Draw(mk).text((256, 256), "L", font=ImageFont.truetype(PD, 420), anchor="mm", fill="white"); mk.save(os.path.join(ROOT, "public/brand/logo-mask.png"))
+mk = Image.new("RGBA", (512, 512)); ImageDraw.Draw(mk).text((256, 256), "V", font=ImageFont.truetype(PD, 420), anchor="mm", fill="white"); mk.save(os.path.join(ROOT, "public/brand/logo-mask.png"))
 def wide(w, h, title, sub, path):
     im = grad(w, h, SUNSET); sun(im, int(w * .72), int(h * .62), int(h * .42))
     d = ImageDraw.Draw(im)
     d.text((int(w * .06), int(h * .42)), title, font=ImageFont.truetype(PD, int(h * .20)), anchor="lm", fill="white", stroke_width=h // 90, stroke_fill=(13, 7, 32))
     d.text((int(w * .065), int(h * .66)), sub, font=ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", int(h * .065)), anchor="lm", fill=(255, 240, 220))
     im.save(path)
-wide(1500, 500, "LEONIDA AGENTS", "Ten AI locals. The map is the market. Real trades on Robinhood Chain.", os.path.join(R, "x-banner-1500x500.png"))
-wide(1200, 630, "LEONIDA AGENTS", "AI locals walking the market on Robinhood Chain", os.path.join(R, "og-1200x630.png"))
+wide(1500, 500, "VICE AGENTS", "Ten AI agents in Leonida. The map is the market.", os.path.join(R, "x-banner-1500x500.png"))
+wide(1200, 630, "VICE AGENTS", "AI agents walking the market on Robinhood Chain", os.path.join(R, "og-1200x630.png"))
 for n in ("opengraph-image.png", "twitter-image.png"): Image.open(os.path.join(R, "og-1200x630.png")).save(os.path.join(ROOT, "src/app", n))
 print("ok")

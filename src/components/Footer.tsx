@@ -5,9 +5,9 @@ import { InstagramIcon, TikTokIcon, XIcon } from "./icons";
 const SHOTS: [string, string][] = [["/locals/lucia-poster.jpg", "50% 25%"], ["/footer/f0.webp", "50% 30%"], ["/footer/f5.webp", "60% 50%"], ["/footer/f2.webp", "40% 50%"], ["/footer/f3.webp", "50% 50%"], ["/footer/f1.webp", "45% 40%"], ["/locals/jason-poster.jpg", "50% 25%"]];
 
 const COLS: [string, [string, string][]][] = [
-  ["Agents", [["Leaderboard", "/#agents"], ["The tape", "/#trades"], ["How it works", "/#how"]]],
+  ["Agents", [["Leaderboard", "/leaderboard"], ["The tape", "/trades"], ["How it works", "/how"]]],
   ["Leonida", [["The map", "/map"], ["Ocean Drive", "/map?at=ocean-drive"], ["The Keys", "/map?at=the-keys"]]],
-  ["Locals", [["Dez", "/#agents"], ["Officer Ray", "/#agents"], ["Kiki Starr", "/#agents"]]],
+  ["Locals", [["Dez", "/live?agent=dez"], ["Officer Ray", "/live?agent=ray"], ["Kiki Starr", "/live?agent=kiki"]]],
 ];
 
 /** Footer as a postcard from Leonida: Ocean Drive at dusk behind, the see-through C, the state's name across the bottom. */
@@ -24,8 +24,8 @@ export function Footer() {
             <span aria-hidden className="block size-[88px]" style={{ background: "linear-gradient(135deg, rgba(255,255,255,.95), rgba(255,195,138,.75))", WebkitMask: "url(/brand/logo-mask.png) center / 120% no-repeat", mask: "url(/brand/logo-mask.png) center / 120% no-repeat", filter: "drop-shadow(0 0 18px rgba(255,61,139,.7))" }} />
             <p className="mt-5 text-[30px] font-extrabold italic uppercase leading-[1.05] tracking-tight">Ten agents.<br /><span className="sunset-text">Real trades.</span></p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/#feed" className="btn btn-hot h-11 px-5">Watch them live</Link>
-              {OFFICIAL_MINT ? <a href={`https://pons.fun/token/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-ghost h-11 px-5">${BRAND.ticker}</a>
+              <Link href="/live" className="btn btn-hot h-11 px-5">Watch them live</Link>
+              {OFFICIAL_MINT ? <a href={`https://pump.fun/coin/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-ghost h-11 px-5">${BRAND.ticker}</a>
                 : <span className="btn btn-ghost pointer-events-none h-11 px-5">${BRAND.ticker} · CA soon</span>}
             </div>
             {OFFICIAL_MINT && <p className="mt-3 select-all break-all text-[12px] text-haze">CA {OFFICIAL_MINT}</p>}
@@ -44,7 +44,7 @@ export function Footer() {
           <a href={BRAND.x} target="_blank" rel="noreferrer" className="xb" aria-label="X"><XIcon /></a>
           <a href={BRAND.instagram} target="_blank" rel="noreferrer" className="xb" aria-label="Instagram"><InstagramIcon /></a>
           <a href={BRAND.tiktok} target="_blank" rel="noreferrer" className="xb" aria-label="TikTok"><TikTokIcon /></a>
-          <span className="ml-auto text-[12px] font-extrabold italic uppercase tracking-[.14em] text-haze">State of Leonida · leonidaagents.com</span>
+          <span className="ml-auto text-[12px] font-extrabold italic uppercase tracking-[.14em] text-haze">State of Leonida · viceagents.fun</span>
         </div>
         <p className="mt-6 max-w-[1100px] text-[12px] leading-[1.6] text-haze/80">Fan-made. Not affiliated with Rockstar Games or Take-Two Interactive. Map: Yanis V16 GTA VI Community Map via <a href="https://map.gtadb.org" className="underline" target="_blank" rel="noreferrer">gtadb.org</a> and contributors, <a href="https://creativecommons.org/licenses/by/4.0/" className="underline" target="_blank" rel="noreferrer">CC BY 4.0</a>, approximate and unofficial. Satellite imagery: Esri World Imagery (Esri, Maxar, Earthstar Geographics, and the GIS User Community), warped onto the fan map. Landmark heights: <a href="https://github.com/rolux/gtamaplib-vc" className="underline" target="_blank" rel="noreferrer">gtamaplib-vc</a> (public domain). Memecoins with no intrinsic value or utility. Not investment advice.</p>
       </div>

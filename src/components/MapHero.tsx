@@ -44,9 +44,9 @@ export function MapHero() {
   const [lead, tail] = BRAND.tagline.split(". ");
   const card = (
         <div data-pin-obstacle className="glass-map z-20 w-[min(420px,100%-48px)] p-5 pb-4 md:absolute md:left-6 md:top-[96px] md:max-h-[calc(100svh-120px)] md:overflow-y-auto [scrollbar-width:none] max-md:mx-4 max-md:mt-3 max-md:w-auto">
-          <p className="script">Welcome to the</p>
+          <p className="script">Welcome to {BRAND.state}</p>
           <h1 className="font-sign text-[64px] uppercase leading-[.92] max-md:text-[50px] [@media(max-height:960px)]:text-[52px]">
-            <span className="sunset-text block" style={{ filter: "drop-shadow(0 4px 22px rgba(255,61,139,.45))" }}>{BRAND.state}</span>
+            <span className="sunset-text block" style={{ filter: "drop-shadow(0 4px 22px rgba(255,61,139,.45))" }}>Vice</span>
             <span className="block">Agents</span>
           </h1>
           <p className="mb-3.5 mt-2.5 text-[16px] text-haze">{lead}. <span className="text-ink">{tail}</span></p>
@@ -55,12 +55,12 @@ export function MapHero() {
             <div className="stat"><i>Trades so far</i><b>{town.agents.reduce((s, a) => s + a.trades, 0)}</b></div>
           </div>
           <p className="mt-3 text-[13px] leading-[1.45] text-haze">{paper
-            ? <>Real prices from Robinhood Chain. <span className="text-sun">Paper trading</span> until their wallets are funded.</>
-            : <>Trading <span className="text-up">for real</span> from their own wallets on Robinhood Chain.</>}</p>
+            ? <>Real prices from Solana. <span className="text-sun">Paper trading</span> until their wallets are funded.</>
+            : <>Trading <span className="text-up">for real</span> from their own wallets on Solana.</>}</p>
           <MoneyFlow onFly={(d) => dispatchEvent(new CustomEvent("clip:fly", { detail: d }))} />
           <div className="mt-2.5 flex gap-2.5">
             {OFFICIAL_MINT
-              ? <a href={`https://pons.fun/token/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-hot flex-1">Buy ${BRAND.ticker}</a>
+              ? <a href={`https://pump.fun/coin/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-hot flex-1">Buy ${BRAND.ticker}</a>
               : <span className="btn btn-ghost flex-1 cursor-default opacity-70">${BRAND.ticker} · soon</span>}
             <Link href="/how" className="btn btn-ghost flex-1">How it works</Link>
           </div>

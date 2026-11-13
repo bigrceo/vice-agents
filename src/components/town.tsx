@@ -32,7 +32,7 @@ export function agentAsCoin(a: AgentView, events: TownEvent[] = []): Coin {
     mcapUsd: a.equity * 1e6, change24h: Math.round(a.pnlPct * 10) / 10, volumeEth: 0, holders: 0, bondingPct: 0, migrated: false,
     createdAt: new Date().toISOString(), mapU: a.u, mapV: a.v, description: a.thought, ring: a.color, bubble };
 }
-export const eth = (n: number) => `${n >= 0.1 ? n.toFixed(3) : n.toFixed(4)} ETH`;
+export const eth = (n: number) => `${n >= 0.1 ? n.toFixed(3) : n.toFixed(4)} SOL`;
 export const signed = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(2)}%`;
 export function ago(iso: string) {
   const s = Math.max(1, Math.round((Date.now() - +new Date(iso)) / 1000));

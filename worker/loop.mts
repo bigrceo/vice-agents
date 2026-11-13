@@ -1,32 +1,30 @@
 /**
  * The agent loop (Railway): every tick the locals of Leonida walk the map, think, talk to each other and trade.
- * Prices are real (Robinhood Chain v4 quoter for tokenized stocks, Pons curves/pools for coins).
- * Trades are paper until REAL_TRADING=1 and the agent's own wallet holds MIN_REAL_ETH.
+ * Prices are real (Jupiter for xStocks and pump.fun coins, pump.fun curve progress read on chain).
+ * Trades are paper until REAL_TRADING=1 and the agent's own Solana wallet holds MIN_REAL_SOL; real trades go through Jupiter
+ * (PumpPortal for fresh curve coins Jupiter can't route yet), signed by the agent's own keypair.
+ * Amounts are SOL. Column names (`cash`, `eth`) are kept from the Robinhood build.
  */
 import postgres from "postgres";
-import { mnemonicToAccount } from "viem/accounts";
-import { createWalletClient, formatEther, http, parseEther, type Address, type Hex } from "viem";
+import { PublicKey } from "@solana/web3.js";
 import { CAST, type Agent } from "../src/lib/agents/cast";
 import { SECTORS, sectorOf } from "../src/lib/agents/sectors";
 import { DISTRICTS } from "../src/components/map/districts";
-import { STOCKS, bestRoute } from "../src/lib/stocks/route";
-import { client, robinhood, ZERO } from "../src/lib/stocks/chain";
-import { realSwap } from "../src/lib/stocks/exec";
-import { getMarket, ethUsd } from "../src/lib/rh/market";
-import { getLogsChunked } from "../src/lib/rh/util";
-import { readClient } from "../src/lib/rh/rpc";
-import { factoryAbi } from "../src/lib/rh/abis";
-import { ADDR } from "../src/lib/rh/config";
+import { stocks, pumpCoins, byMints, solUsd, curveProgress, type Mkt } from "../src/lib/sol/market";
+import { planSwap, executePlan } from "../src/lib/sol/index";
+import { connection, LAMPORTS } from "../src/lib/sol/solana";
+import { tokenByMint } from "../src/lib/sol/tokens";
+import { agentKeypair, signerOf } from "../src/lib/sol/wallets";
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 2, prepare: false, onnotice: () => {} });
 const MODEL = process.env.LLM_MODEL || "google/gemini-2.5-flash";
-const START_ETH = 0.05;                         // paper bankroll, same size as a funded real wallet
-const MIN_REAL_ETH = +(process.env.MIN_REAL_ETH || 0.01);
+const START_SOL = 0.5;                          // paper bankroll
+const MIN_REAL_SOL = +(process.env.MIN_REAL_SOL || 0.1);
+const FEE_RESERVE = 0.01;                       // kept for fees and token-account rent
 const REAL = process.env.REAL_TRADING === "1";
 const STEP_MS = 4_000, THINK_MS = +(process.env.THINK_MS || 20_000), PRICE_MS = 120_000;
-const UNIVERSE = ["SPY", "QQQ", "VTI", "NVDA", "TSLA", "AAPL", "MSFT", "GOOGL", "META", "AMZN", "AVGO", "TSM", "SMH", "COIN", "PLTR", "NFLX", "XOM", "USO", "GLD", "SLV", "RKLB", "ASTS", "SMCI", "INTC", "BA", "LLY", "CCL", "UNH"];
 
-const account = (a: Agent) => mnemonicToAccount(process.env.AGENT_MNEMONIC!, { addressIndex: a.index });
+const account = (a: Agent) => agentKeypair(a.index);
 
 async function schema() {
   await sql`create table if not exists la_agents (id text primary key, address text not null, u double precision, v double precision, tu double precision, tv double precision,
@@ -39,66 +37,43 @@ async function schema() {
   await sql`create table if not exists la_meta (k text primary key, v text)`;
   await sql`alter table la_prices add column if not exists liq double precision`;
   await sql`alter table la_prices add column if not exists fresh boolean default false`;
+  await sql`alter table la_prices add column if not exists logo text`;
+  await sql`alter table la_prices add column if not exists progress double precision`;
+  await sql`alter table la_prices add column if not exists graduated boolean default false`;
   for (const a of CAST) {
     const d = DISTRICTS.find((x) => x.name === a.home)!;
-    await sql`insert into la_agents (id, address, u, v, tu, tv, district, cash) values (${a.id}, ${account(a).address}, ${d.u}, ${d.v}, ${d.u}, ${d.v}, ${a.home}, ${START_ETH}) on conflict (id) do update set address = excluded.address`;
+    await sql`insert into la_agents (id, address, u, v, tu, tv, district, cash) values (${a.id}, ${account(a).publicKey.toBase58()}, ${d.u}, ${d.v}, ${d.u}, ${d.v}, ${a.home}, ${START_SOL}) on conflict (id) do update set address = excluded.address`;
   }
 }
 
 // ---------------- prices ----------------
-type Px = { symbol: string; kind: "stock" | "pons"; token: string; name: string; price: number; mcapUsd: number; liq: number; fresh?: boolean };
-/** Paper fills move the price like a constant-product pool of `liq` ETH would: no free exits from thin coins. */
-const fillIn = (eth: number, x: Px) => (eth / x.price) * (x.liq / (x.liq + eth));
+type Px = { symbol: string; kind: "stock" | "pump"; token: string; name: string; logo: string; decimals: number; price: number; mcapUsd: number; liq: number; fresh?: boolean; progress?: number; graduated?: boolean };
+/** Paper fills move the price like a constant-product pool of `liq` SOL would: no free exits from thin coins. */
+const fillIn = (sol: number, x: Px) => (sol / x.price) * (x.liq / (x.liq + sol));
 const fillOut = (qty: number, x: Px) => { const v = qty * x.price; return v * (x.liq / (x.liq + v)); };
 let PX = new Map<string, Px>();
-let ETH_USD = 0;
-const PROBE = parseEther("0.005");
+let SOL_USD = 0;
 
-async function stockPrices() {
-  const out: Px[] = [];
-  for (const sym of UNIVERSE) {
-    const st = STOCKS.find((s) => s.symbol === sym); if (!st) continue;
-    const r = await bestRoute(ZERO, st.address, PROBE, {}).catch(() => null);
-    if (r && r.out > 0n) out.push({ symbol: sym, kind: "stock", token: st.address, name: sym, price: 0.005 / (Number(r.out) / 10 ** st.decimals), mcapUsd: 0, liq: 1000 });
-  }
-  return out;
-}
-
-let ponsCache: { at: number; list: Address[] } = { at: 0, list: [] };
-async function ponsPrices() {
-  if (Date.now() - ponsCache.at > 15 * 60_000) {
-    const to = await readClient.getBlockNumber();
-    const ev = factoryAbi.find((x) => x.type === "event" && x.name === "TokenLaunched") as any;
-    const logs = await getLogsChunked({ address: ADDR.factory, event: ev, fromBlock: to - 3_000_000n, toBlock: to }).catch(() => []);
-    ponsCache = { at: Date.now(), list: [...new Set((logs as any[]).map((l) => l.args.token as Address))].slice(-250) };
-  }
-  const ms = await Promise.all(ponsCache.list.map((t) => getMarket(t).catch(() => null)));
-  const ok = ms.filter((m) => m && m.mcapUsd && String(m.symbol ?? "").replace(/[^A-Za-z0-9]/g, ""));
-  // the trenches: the biggest live coins, plus the freshest launches that already have a real pool behind them
-  const top = ok.filter((m) => m!.liquidityEth > 0.2).sort((a, b) => b!.mcapUsd! - a!.mcapUsd!).slice(0, 6);
-  const fresh = ok.slice(-60).reverse().filter((m) => m!.liquidityEth > 0.08 && !top.includes(m)).slice(0, 4);
-  return [...top.map((m) => [m, false] as const), ...fresh.map((m) => [m, true] as const)]
-    .map(([m, f]) => ({ symbol: String(m!.symbol).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8), kind: "pons" as const, token: m!.token, name: m!.name ?? "", price: m!.priceEth, mcapUsd: m!.mcapUsd!, liq: m!.liquidityEth, fresh: f }))
-    // two Pons coins can share a ticker: the symbol becomes unique by address, so a bag is always priced by its own token
-    .map((x, _, all) => all.some((y) => y.symbol === x.symbol && y.token !== x.token) ? { ...x, symbol: `${x.symbol}${x.token.slice(-3).toUpperCase()}` } : x);
-}
+const toPx = (m: Mkt, fresh = false): Px => ({ symbol: m.symbol, kind: m.kind, token: m.mint, name: m.name, logo: m.logo, decimals: m.decimals, price: m.priceSol, mcapUsd: m.mcapUsd, liq: m.liqSol, fresh, graduated: m.graduated });
 
 async function refreshPrices() {
-  const [st, p, e] = await Promise.all([stockPrices(), ponsPrices().catch((err) => { console.error("pons", err.message); return [] as Px[]; }), ethUsd()]);
-  if (e) ETH_USD = e.price;
-  const all: Px[] = [...st, ...p];
+  const sol = await solUsd(); if (!sol) return;
+  SOL_USD = sol;
+  const [st, p] = await Promise.all([stocks(sol).catch((e) => { console.error("xstocks", e.message); return [] as Mkt[]; }), pumpCoins(sol).catch((e) => { console.error("pump", e.message); return []; })]);
+  const all: Px[] = [...st.map((m) => toPx(m)), ...p.map((m) => toPx(m, m.fresh))];
   if (!all.length) return;
   // keep coins agents already hold, even if they fell out of the trenches list
-  const held = await sql`select distinct symbol, kind, token from la_positions where qty > 0 and kind = 'pons'`;
-  for (const h of held) if (!all.some((x) => x.symbol === h.symbol)) {
-    const m = await getMarket(h.token).catch(() => null);
-    if (m) all.push({ symbol: h.symbol, kind: "pons", token: h.token, name: m.name ?? "", price: m.priceEth, mcapUsd: m.mcapUsd ?? 0, liq: m.liquidityEth });
-  }
+  const held = await sql`select distinct symbol, token from la_positions where qty > 0 and kind = 'pump'`;
+  const missing = held.filter((h) => !all.some((x) => x.token === h.token));
+  for (const m of await byMints(missing.map((h) => h.token), sol).catch(() => [])) all.push({ ...toPx(m), symbol: missing.find((h) => h.token === m.mint)!.symbol });
+  const prog = await curveProgress(all.filter((x) => x.kind === "pump").map((x) => x.token)).catch(() => new Map());
+  for (const x of all) if (x.kind === "pump") { const c = prog.get(x.token); x.progress = c?.progress ?? (x.graduated ? 100 : 0); x.graduated = x.graduated || !!c?.complete; }
   PX = new Map(all.map((x) => [x.symbol, x]));
-  for (const x of all) await sql`insert into la_prices (symbol, kind, token, name, price, open, mcap_usd, liq, fresh) values (${x.symbol}, ${x.kind}, ${x.token}, ${x.name}, ${x.price}, ${x.price}, ${x.mcapUsd}, ${x.liq}, ${!!x.fresh})
-    on conflict (symbol) do update set price = excluded.price, mcap_usd = excluded.mcap_usd, liq = excluded.liq, token = excluded.token, fresh = excluded.fresh, updated_at = now()`;
-  await sql`insert into la_meta (k, v) values ('eth_usd', ${String(ETH_USD)}) on conflict (k) do update set v = excluded.v`;
-  console.log(`prices: ${st.length} stocks, ${p.length} pons, ETH $${ETH_USD.toFixed(0)}`);
+  for (const x of all) await sql`insert into la_prices (symbol, kind, token, name, price, open, mcap_usd, liq, fresh, logo, progress, graduated) values (${x.symbol}, ${x.kind}, ${x.token}, ${x.name}, ${x.price}, ${x.price}, ${x.mcapUsd}, ${x.liq}, ${!!x.fresh}, ${x.logo}, ${x.progress ?? null}, ${!!x.graduated})
+    on conflict (symbol) do update set price = excluded.price, mcap_usd = excluded.mcap_usd, liq = excluded.liq, token = excluded.token, fresh = excluded.fresh, logo = excluded.logo, progress = excluded.progress, graduated = excluded.graduated, updated_at = now()`;
+  await sql`delete from la_prices where kind = 'pump' and updated_at < now() - interval '30 minutes' and symbol not in (select symbol from la_positions where qty > 0)`;
+  await sql`insert into la_meta (k, v) values ('sol_usd', ${String(SOL_USD)}) on conflict (k) do update set v = excluded.v`;
+  console.log(`prices: ${st.length} xstocks, ${p.length} pump.fun, SOL $${SOL_USD.toFixed(0)}`);
 }
 
 /** Where an agent goes next: mostly the district of something it holds (the map shows where the money sits), else one of its spots. */
@@ -162,19 +137,19 @@ async function think(a: Agent) {
   const opens = new Map((await sql`select symbol, open from la_prices`).map((r) => [r.symbol, r.open]));
   const market = SECTORS.map((sec) => {
     const rows = [...PX.values()].filter((x) => sectorOf(x.symbol, x.kind).id === sec.id);
-    return rows.length ? `${sec.name} (district ${sec.district}):\n` + rows.map((x) => `  ${x.symbol}${x.fresh ? " FRESH LAUNCH" : ""}${x.kind === "pons" ? ` mcap $${Math.round(x.mcapUsd / 1000)}k, pool ${x.liq.toFixed(2)} ETH` : ""} ${fmt(x.price)} ETH, ${(((x.price / (opens.get(x.symbol) || x.price)) - 1) * 100).toFixed(1)}% since tracked`).join("\n") : "";
+    return rows.length ? `${sec.name} (district ${sec.district}):\n` + rows.map((x) => `  ${x.symbol}${x.fresh ? " FRESH LAUNCH" : ""}${x.kind === "pump" ? ` mcap $${Math.round(x.mcapUsd / 1000)}k, pool ${x.liq.toFixed(1)} SOL${x.graduated ? "" : `, curve ${Math.round(x.progress ?? 0)}%`}` : " (xStock)"} ${fmt(x.price)} SOL, ${(((x.price / (opens.get(x.symbol) || x.price)) - 1) * 100).toFixed(1)}% since tracked`).join("\n") : "";
   }).filter(Boolean).join("\n");
-  const book = pos.map((p) => { const px = PX.get(p.symbol)?.price ?? 0; return `${p.symbol}: ${fmt(p.qty)} units, cost ${fmt(p.cost)} ETH, now ${fmt(p.qty * px)} ETH`; }).join("\n") || "nothing";
+  const book = pos.map((p) => { const px = PX.get(p.symbol)?.price ?? 0; return `${p.symbol}: ${fmt(p.qty)} units, cost ${fmt(p.cost)} SOL, now ${fmt(p.qty * px)} SOL`; }).join("\n") || "nothing";
   const names = Object.fromEntries(CAST.map((c) => [c.id, c.name]));
   const system = `You are ${a.name}, ${a.role} in Leonida (a Florida-like state: Vice City, the Keys, swamps). ${a.persona}
-You live on a map and trade real tokenized stocks and Pons memecoins on Robinhood Chain. The map is the market: ${SECTORS.map((x) => `${x.district} = ${x.name.toLowerCase()}`).join(", ")}. You walk to the district of what you trade.
-The trenches matter most: fresh Pons launches are where a sharp call gets noticed, but thin pools punish size. Style: ${a.style}. Favourite names: ${a.likes.join(", ")} (PONS = any Pons memecoin).
+You live on a map and trade real tokenized stocks (xStocks) and pump.fun memecoins on Solana. The map is the market: ${SECTORS.map((x) => `${x.district} = ${x.name.toLowerCase()}`).join(", ")}. You walk to the district of what you trade.
+The trenches matter most: fresh pump.fun launches are where a sharp call gets noticed, but thin pools punish size. Style: ${a.style}. Favourite names: ${a.likes.join(", ")} (PUMP = any pump.fun memecoin).
 Stay in character, English, short and punchy, no hashtags, no emojis. Never mention being an AI. Never say GTA or Rockstar.
 Answer ONLY JSON: {"thought": "<inner thought, max 140 chars>", "say": {"to": "<agent id or null>", "text": "<line said out loud, max 140 chars>"} | null,
 "move_to": "<one of: ${[...new Set([...a.haunts, ...SECTORS.map((x) => x.district)])].join(", ")}> | null", "trade": {"side": "buy"|"sell", "symbol": "<symbol from the market list>", "pct": <1-60, % of cash for buys or % of position for sells>, "reason": "<why, in character, max 160 chars>"} | null}
 Trade at most when it makes sense for you; holding is fine. Agent ids: ${CAST.filter((c) => c.id !== a.id).map((c) => `${c.id}=${c.name} (${c.role})`).join(", ")}.`;
   const user = `You are in ${me.district}. Nearby: ${near.map((n) => names[n]).join(", ") || "nobody"}.
-Cash: ${fmt(me.cash)} ETH (ETH = $${ETH_USD.toFixed(0)}). Holdings:\n${book}
+Cash: ${fmt(me.cash)} SOL (SOL = $${SOL_USD.toFixed(0)}). Holdings:\n${book}
 Market now:\n${market}
 Recently heard in town:\n${heard.reverse().map((h) => `${names[h.agent_id]}${h.to_agent ? ` to ${names[h.to_agent]}` : ""}: ${h.text}`).join("\n") || "quiet"}`;
   const out = await llm(system, user);
@@ -194,43 +169,57 @@ async function trade(a: Agent, me: any, pos: any[], t: { side: string; symbol: s
   const px = PX.get(sym); if (!px || !(px.price > 0)) return;
   const pct = Math.max(1, Math.min(60, +t.pct || 10)) / 100;
   const held = pos.find((p) => p.symbol === sym);
-  const acct = account(a);
-  const bal = REAL ? Number(formatEther(await client.getBalance({ address: acct.address }))) : 0;
-  const mode = REAL && bal >= MIN_REAL_ETH ? "real" : "paper";
-  let qty: number, eth: number, tx: string | null = null;
+  const kp = account(a);
+  const bal = REAL ? (await connection().getBalance(kp.publicKey)) / LAMPORTS : 0;
+  const mode = REAL && bal >= MIN_REAL_SOL ? "real" : "paper";
+  let qty: number, sol: number, tx: string | null = null;
   if (t.side === "buy") {
-    eth = (mode === "real" ? Math.max(0, bal - 0.002) : me.cash) * pct; // real: size on the wallet, keep 0.002 ETH for gas
-    if (px.kind === "pons") eth = Math.min(eth, px.liq * 0.02);   // never more than 2% of a coin's pool
-    if (eth < 0.0005) return;
-    qty = fillIn(eth, px);
-    if (mode === "real") tx = await sendReal(a, px, "buy", parseEther(eth.toFixed(18)));
-    await sql`update la_agents set cash = cash - ${eth} where id = ${a.id}`;
-    await sql`insert into la_positions (agent_id, symbol, kind, token, qty, cost) values (${a.id}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${eth})
+    sol = (mode === "real" ? Math.max(0, bal - FEE_RESERVE) : me.cash) * pct;
+    if (px.kind === "pump") sol = Math.min(sol, px.liq * 0.02);   // never more than 2% of a coin's pool
+    if (sol < 0.005) return;
+    qty = fillIn(sol, px);
+    if (mode === "real") ({ tx, qty, sol } = await sendReal(a, px, "buy", sol));
+    await sql`update la_agents set cash = cash - ${sol} where id = ${a.id}`;
+    await sql`insert into la_positions (agent_id, symbol, kind, token, qty, cost) values (${a.id}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${sol})
       on conflict (agent_id, symbol) do update set qty = la_positions.qty + excluded.qty, cost = la_positions.cost + excluded.cost`;
   } else {
     if (!held || held.qty <= 0) return;
-    qty = held.qty * (pct >= 0.55 ? 1 : pct); eth = fillOut(qty, px);
-    if (mode === "real") tx = await sendReal(a, px, "sell", BigInt(Math.floor(qty * 1e18)));
-    await sql`update la_agents set cash = cash + ${eth} where id = ${a.id}`;
-    await sql`update la_positions set qty = qty - ${qty}, cost = cost * (1 - ${qty / held.qty}) where agent_id = ${a.id} and symbol = ${sym}`;
+    qty = held.qty * (pct >= 0.55 ? 1 : pct); sol = fillOut(qty, px);
+    if (mode === "real") ({ tx, qty, sol } = await sendReal(a, px, "sell", qty, pct >= 0.55));
+    await sql`update la_agents set cash = cash + ${sol} where id = ${a.id}`;
+    await sql`update la_positions set qty = greatest(0, qty - ${qty}), cost = cost * greatest(0, 1 - ${qty / held.qty}) where agent_id = ${a.id} and symbol = ${sym}`;
   }
-  await sql`insert into la_trades (agent_id, side, symbol, kind, token, qty, price, eth, reason, mode, tx) values (${a.id}, ${t.side}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${eth / qty}, ${eth}, ${String(t.reason ?? "").slice(0, 220)}, ${mode}, ${tx})`;
-  await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'trade', ${`${t.side === "buy" ? "bought" : "sold"} ${eth.toFixed(4)} ETH of $${sym}: ${String(t.reason ?? "").slice(0, 160)}`}, ${me.district})`;
+  await sql`insert into la_trades (agent_id, side, symbol, kind, token, qty, price, eth, reason, mode, tx) values (${a.id}, ${t.side}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${sol / qty}, ${sol}, ${String(t.reason ?? "").slice(0, 220)}, ${mode}, ${tx})`;
+  await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'trade', ${`${t.side === "buy" ? "bought" : "sold"} ${sol.toFixed(3)} SOL of $${sym}: ${String(t.reason ?? "").slice(0, 160)}`}, ${me.district})`;
   await sql`update la_agents set mode = ${mode} where id = ${a.id}`;
   const sec = sectorOf(sym, px.kind);
   if (sec.district !== me.district) await goTo(a, sec.district, `heads to ${sec.district} (${sec.name.toLowerCase()}) to ${t.side} $${sym}`);
-  console.log(`${a.id} ${mode} ${t.side} ${sym} ${eth.toFixed(4)} ETH`);
+  console.log(`${a.id} ${mode} ${t.side} ${sym} ${sol.toFixed(4)} SOL`);
 }
 
-async function sendReal(a: Agent, px: Px, side: "buy" | "sell", amount: bigint) {
-  const acct = account(a);
-  const w = createWalletClient({ account: acct, chain: robinhood, transport: http() });
-  return realSwap({ kind: px.kind, token: px.token as Address, side, amount, owner: acct.address, send: (s) => w.sendTransaction({ to: s.to, data: s.data as Hex, value: s.value }) });
+/** A real swap from the agent's own wallet. Returns what actually moved on chain (the book follows the chain, not the quote). */
+async function sendReal(a: Agent, px: Px, side: "buy" | "sell", amount: number, all = false) {
+  const kp = account(a), owner = kp.publicKey.toBase58();
+  const token = await tokenByMint(px.token); if (!token) throw new Error(`no token data for ${px.symbol}`);
+  let raw: bigint;
+  if (side === "buy") raw = BigInt(Math.floor(amount * LAMPORTS));
+  else {
+    const accs = await connection().getParsedTokenAccountsByOwner(kp.publicKey, { mint: new PublicKey(px.token) });
+    const have = accs.value.reduce((s, x) => s + BigInt(x.account.data.parsed.info.tokenAmount.amount), 0n);
+    raw = all ? have : BigInt(Math.min(Number(have), Math.floor(amount * 10 ** token.decimals)));
+    if (raw <= 0n) throw new Error(`wallet holds no ${px.symbol}`);
+  }
+  const plan = await planSwap({ side, token, quote: "SOL", amount: raw, slippageBps: px.kind === "pump" ? 500 : 150 });
+  const r = await executePlan(plan, owner, signerOf(kp));
+  const dec = 10 ** token.decimals;
+  return side === "buy"
+    ? { tx: r.signature, qty: Number(r.received) / dec, sol: Number(r.spent) / LAMPORTS }
+    : { tx: r.signature, qty: Number(r.spent) / dec, sol: Number(r.received) / LAMPORTS };
 }
 
 // ---------------- main ----------------
 async function main() {
-  if (!process.env.AGENT_MNEMONIC) throw new Error("AGENT_MNEMONIC missing");
+  account(CAST[0]);   // fails fast without a valid AGENT_SEED
   await schema();
   await refreshPrices();
   setInterval(() => refreshPrices().catch((e) => console.error("prices", e.message)), PRICE_MS);
@@ -243,6 +232,6 @@ async function main() {
     setTimeout(tick, THINK_MS);
   };
   tick();
-  console.log(`agents up · ${process.env.ANTHROPIC_API_KEY ? "anthropic" : MODEL} · ${REAL ? "REAL trading armed (min " + MIN_REAL_ETH + " ETH)" : "paper trading"}`);
+  console.log(`agents up · ${process.env.ANTHROPIC_API_KEY ? "anthropic" : MODEL} · ${REAL ? "REAL trading armed (min " + MIN_REAL_SOL + " SOL)" : "paper trading"}`);
 }
 main();

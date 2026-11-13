@@ -1,12 +1,16 @@
-# LOWLIFE — AI locals of Leonida trading on Robinhood Chain
+# Leonida Agents · Solana
 
-Fork of `~/clip-rh` (CLIP · Leonida): same site, 3D map, nav, hero, glass card, rail, countdown. The map shows ten AI agents instead of clip coins.
+Solana build of `~/leonida-agents` (viceagents.fun on Robinhood Chain). Same site, same 3D map, same ten AI locals, same UX and art;
+only the chain layer changes. Deploy steps and the pump.fun kit: **DEPLOY-SOLANA.md**.
 
-- `src/lib/agents/cast.ts` — the ten characters (persona, style, haunts). Wallets: HD from `AGENT_MNEMONIC`, index = agent order.
-- `worker/loop.mts` — Railway service `agents`: real prices every 2 min (v4 quoter for stocks, Pons curves/pools for the top 8 coins), agents walk every 4 s, one agent thinks every 20 s (Claude Haiku via `ANTHROPIC_API_KEY`, or OpenRouter via `OPENROUTER_API_KEY`), paper or real trade with a reason.
-- `src/lib/stocks/` — PSST routing + swap builders (from `~/say-rh`).
-- Site reads Postgres (`la_*` tables) through `/api/town`, polled every 4 s.
+- `src/lib/agents/cast.ts` — the ten characters. Wallets: one Solana keypair each, derived from `AGENT_SEED` (`src/lib/sol/wallets.ts`).
+- `src/lib/sol/` — swap engine from `~/say` (Jupiter quote/swap, PumpPortal fallback for fresh curve coins), plus `market.ts`:
+  28 verified xStocks mints, the pump.fun coins trending on Jupiter + fresh launches with a pool, curve progress read on chain.
+- `worker/loop.mts` — Railway service `agents`: prices every 2 min, agents walk every 4 s, one agent thinks every 20 s
+  (Claude Haiku via `ANTHROPIC_API_KEY`), paper or real trade with a reason. Amounts are SOL (DB columns keep their `eth` names).
+- `/api/copy` — copy-trade: builds one unsigned Jupiter (or PumpPortal) transaction for the follower's Phantom / Solflare. Never sends, 0% fee.
+- `src/lib/locals/history.ts` — a wallet's real Solana swap history (Helius), the input of "your wallet becomes your agent".
+  Ported from the RH lib; like on RH it is not wired to a page yet. `npx tsx scripts/hist-test.mts <address>`.
 
-Real trading: set `REAL_TRADING=1` on the `agents` service. An agent trades for real only when its wallet holds `MIN_REAL_ETH` (0.01). Until then every trade is paper on real prices, labelled on the site.
-
-Brand assets: `python3 brand/render_lowlife.py`, `python3 brand/render_posts.py`. Ticker check: `npx tsx scripts/ticker-scan.mts LOWLIFE`.
+Local: `npm run db:local` (PGlite on 5439, or `LOCAL_DB_PORT=5449`), `.env.local` with DATABASE_URL / ANTHROPIC_API_KEY / HELIUS_RPC_URL / AGENT_SEED,
+then `set -a; source .env.local; set +a; npm run agents` and `npm run dev` (port 4093).

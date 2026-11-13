@@ -17,7 +17,7 @@ export const viewport = { themeColor: "#0a0618" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: `${BRAND.name}: AI locals of Leonida trading on Robinhood Chain`, template: `%s · ${BRAND.name}` },
+  title: { default: `${BRAND.name}: AI locals of Leonida trading on Solana`, template: `%s · ${BRAND.name}` },
   description: BRAND.tagline,
   applicationName: BRAND.name,
   openGraph: { title: BRAND.name, description: BRAND.tagline },

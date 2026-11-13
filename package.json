@@ -1,13 +1,14 @@
 {
-  "name": "leonida-agents",
+  "name": "leonida-agents-sol",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4083",
+    "dev": "next dev -p 4093",
     "build": "next build",
-    "start": "next start -p 4083",
+    "start": "next start -p 4093",
     "db:push": "drizzle-kit push",
     "db:local": "tsx scripts/localdb.mts",
-    "agents": "tsx worker/loop.mts"
+    "agents": "tsx worker/loop.mts",
+    "seed": "tsx scripts/seed.mts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.10",
@@ -15,9 +16,12 @@
     "@neondatabase/serverless": "^1.0.0",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0",
     "@types/three": "^0.187.0",
     "@vercel/blob": "^2.8.2",
     "3d-tiles-renderer": "^0.5.4",
+    "bs58": "^6.0.0",
     "drizzle-orm": "^0.44.0",
     "eslint-config-next": "16.4.3",
     "ffmpeg-static": "^5.2.0",

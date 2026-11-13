@@ -13,6 +13,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { Coin } from "@/lib/types";
 import { pct } from "@/lib/format";
+import { CAST } from "@/lib/agents/cast";
 import { CityNeon, Clouds, DistrictLabels, MODES, Ocean, Sky, Sun, type Mode } from "./map/Atmosphere";
 import { CityLight } from "./map/Buildings";
 import { TileLayer } from "./map/TileLayer";
@@ -46,7 +47,7 @@ const DISTRICT_COLOR: Record<string, string> = { "Vice City": "#ff5fa8", "Vice B
 /** Stable plot per coin: the official coin owns HQ, the rest hash their mint onto the other plots. */
 
 type Entity = { coin: Coin; plot: Plot; main: boolean };
-const beamHeight = (e: Entity) => e.main ? 1.7 : Math.min(2.2, 0.35 + Math.log10(Math.max(e.coin.mcapUsd, 5000) / 5000) * 0.55);
+const beamHeight = (e: Entity) => e.coin.ring ? 0.12 : e.main ? 1.7 : Math.min(2.2, 0.35 + Math.log10(Math.max(e.coin.mcapUsd, 5000) / 5000) * 0.55);
 const beamColor = (e: Entity) => e.main ? "#ff5fa8" : e.coin.change24h >= 0 ? "#2affc6" : "#ff4d6d";
 
 // ---- scene ----
@@ -59,14 +60,25 @@ function Ground({ onReady, mode }: { onReady: () => void; mode: Mode }) {
   );
 }
 
+/** Where each beacon stands right now: agents glide toward their new spot instead of jumping on every poll. Pins read it too. */
+const walk = new Map<string, THREE.Vector3>();
+function walkTo(e: Entity, dt: number) {
+  const [bx, , bz] = toWorld(e.plot.u, e.plot.v);
+  const k0 = e.coin.ring ? Math.max(0, CAST.findIndex((c) => c.id === e.coin.mint)) * 0.628 : 0, x = bx + (e.coin.ring ? Math.cos(k0) * 0.32 : 0), z = bz + (e.coin.ring ? Math.sin(k0) * 0.22 : 0);   // each local keeps its own spot around a district
+  let p = walk.get(e.coin.mint); if (!p) { p = new THREE.Vector3(x, 0, z); walk.set(e.coin.mint, p); }
+  const k = 1 - Math.exp(-dt * 1.2); p.x += (x - p.x) * k; p.z += (z - p.z) * k; return p;
+}
+
 function Beacon({ e, active, onHover, onSelect }: { e: Entity; active: boolean; onHover: (m: string | null) => void; onSelect: () => void }) {
   const beam = useRef<THREE.Mesh>(null);
   const ring = useRef<THREE.Mesh>(null);
+  const g = useRef<THREE.Group>(null);
   const [x, , z] = toWorld(e.plot.u, e.plot.v);
-  const h = beamHeight(e), col = beamColor(e), dist = DISTRICT_COLOR[e.plot.district] ?? "#fff";
+  const h = beamHeight(e), col = e.coin.ring ?? beamColor(e), dist = DISTRICT_COLOR[e.plot.district] ?? "#fff";
   const speed = 1 + Math.min(1, (e.coin.volumeEth ?? 0) / Math.max(e.coin.mcapUsd, 1) / 0.02);
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime;
+    if (g.current) { const p = walkTo(e, dt); g.current.position.x = p.x; g.current.position.z = p.z; }
     if (ring.current) { const s = 1 + ((t * 0.6 * speed + (x + z)) % 1) * 1.6; ring.current.scale.set(s, s, s); (ring.current.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - (s - 1) / 1.6); }
     if (beam.current) (beam.current.material as THREE.MeshBasicMaterial).opacity = (active ? 0.9 : 0.55) + Math.sin(t * 3 + x) * 0.08;
   });
@@ -77,11 +89,11 @@ function Beacon({ e, active, onHover, onSelect }: { e: Entity; active: boolean; 
     onClick: (ev: { stopPropagation: () => void }) => { ev.stopPropagation(); onSelect(); },
   };
   return (
-    <group position={[x, LAND_Y, z]}>
+    <group ref={g} position={[x, LAND_Y, z]}>
       <mesh rotation-x={-Math.PI / 2} position-y={0.01}><circleGeometry args={[e.main ? 0.32 : 0.2, 40]} /><meshBasicMaterial color={dist} transparent opacity={active ? 0.55 : 0.32} depthWrite={false} /></mesh>
       <mesh ref={ring} rotation-x={-Math.PI / 2} position-y={0.015}><ringGeometry args={[e.main ? 0.3 : 0.18, e.main ? 0.34 : 0.21, 48]} /><meshBasicMaterial color={col} transparent depthWrite={false} /></mesh>
-      <mesh ref={beam} position-y={h / 2} {...ev}><cylinderGeometry args={[r * 0.6, r, h, 20, 1, true]} /><meshBasicMaterial color={col} transparent depthWrite={false} side={THREE.DoubleSide} toneMapped={false} /></mesh>
-      <mesh position-y={h} {...ev}><sphereGeometry args={[r * 1.5, 20, 20]} /><meshBasicMaterial color={col} toneMapped={false} /></mesh>
+      {!e.coin.ring && <><mesh ref={beam} position-y={h / 2} {...ev}><cylinderGeometry args={[r * 0.6, r, h, 20, 1, true]} /><meshBasicMaterial color={col} transparent depthWrite={false} side={THREE.DoubleSide} toneMapped={false} /></mesh>
+      <mesh position-y={h} {...ev}><sphereGeometry args={[r * 1.5, 20, 20]} /><meshBasicMaterial color={col} toneMapped={false} /></mesh></>}
     </group>
   );
 }
@@ -227,11 +239,12 @@ function Controls({ entities, selected, api, onWorld }: { entities: Entity[]; se
 }
 
 // ---- HTML pins projected from the scene, dodging [data-pin-obstacle] boxes ----
-type Slot = { el: HTMLButtonElement | null; line: SVGLineElement | null; fullW: number; fullH: number; measuredAt: number };
+type Slot = { el: HTMLButtonElement | null; line: SVGLineElement | null; fullW: number; fullH: number; measuredAt: number; last?: string };
 type Rect = { x: number; y: number; w: number; h: number };
 const GAP = 6, MINI = 34;
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w + GAP && a.x + a.w + GAP > b.x && a.y < b.y + b.h + GAP && a.y + a.h + GAP > b.y;
-const priority = (e: Entity, hot: boolean) => (hot ? 1e15 : 0) + (e.main ? 1e13 : 0) + e.coin.mcapUsd;
+const priority = (e: Entity, hot: boolean) => (hot ? 1e15 : 0) + (e.main ? 1e13 : 0) + (e.coin.ring ? -entityRank(e) : e.coin.mcapUsd);   // fixed order: live P&L must not reshuffle the pins
+const entityRank = (e: Entity) => Math.abs([...e.coin.mint].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % 1000;
 
 function PinLayout({ entities, slots, hovered, selected }: { entities: Entity[]; slots: Map<string, Slot>; hovered: string | null; selected: string | null }) {
   const camera = useThree((s) => s.camera), size = useThree((s) => s.size), dom = useThree((s) => s.gl.domElement);
@@ -243,10 +256,12 @@ function PinLayout({ entities, slots, hovered, selected }: { entities: Entity[];
     const base = dom.getBoundingClientRect();
     if (frame.current - obstacles.current.at > 15) obstacles.current = { at: frame.current, rects: [...document.querySelectorAll("[data-pin-obstacle]")].map((el) => { const r = el.getBoundingClientRect(); return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height }; }) };
     const taken = [...obstacles.current.rects];
-    const order = [...entities].sort((a, b) => priority(b, b.coin.mint === hovered || b.coin.mint === selected) - priority(a, a.coin.mint === hovered || a.coin.mint === selected));
+    const order = [...entities].sort((a, b) => Number(!!b.coin.bubble) - Number(!!a.coin.bubble) || priority(b, b.coin.mint === selected) - priority(a, a.coin.mint === selected));   // talkers first: their bubble claims its space before anyone else   // hover never reshuffles the layout
+    const pinRects: Rect[] = [];
+    (window as unknown as { __pinRects?: Rect[] }).__pinRects = pinRects;   // the region titles fade out under pins instead of pushing them away
     for (const e of order) {
       const s = slots.get(e.coin.mint); if (!s?.el) continue;
-      const [x, , z] = toWorld(e.plot.u, e.plot.v);
+      const w = walk.get(e.coin.mint), [x, , z] = w ? [w.x, 0, w.z] : toWorld(e.plot.u, e.plot.v);
       v.set(x, (MIAMI ? 0 : LAND_Y) + beamHeight(e), z).project(camera);
       const sx = (v.x + 1) / 2 * size.width, sy = (1 - v.y) / 2 * size.height;
       const onScreen = v.z < 1 && sx > -40 && sx < size.width + 40 && sy > -40 && sy < size.height + 40;
@@ -259,18 +274,30 @@ function PinLayout({ entities, slots, hovered, selected }: { entities: Entity[];
         const w = s.fullW, h = s.fullH;
         const full: [number, number][] = [[-w / 2, -10 - h], [-w / 2, -10 - h * 2 - 8], [16, -h / 2], [-w - 16, -h / 2], [-w / 2, 14], [16, -h - 20], [-w - 16, -h - 20]];
         const mini: [number, number][] = [[-17, -44], [10, -17], [-44, -17]];
-        const fits = (r: Rect) => r.x >= 4 && r.y >= 60 && r.x + r.w <= size.width - 4 && r.y + r.h <= size.height - 4;
-        const place = (cands: [number, number][], w: number, h: number) => { for (const [dx, dy] of cands) { const r = { x: sx + dx, y: sy + dy, w, h }; if (fits(r) && !taken.some((t) => overlaps(r, t))) return r; } return null; };
-        box = place(full, w, h); if (box) mode = "full"; else { box = place(mini, MINI, MINI); if (box) mode = "mini"; }
+        const fits = (r: Rect) => r.x >= 4 && r.y >= 8 && r.x + r.w <= size.width - 4 && r.y + r.h <= size.height - 4;
+        // try the spot this pin used last frame first, so pins only move when that spot is really blocked
+        const sticky = (cands: [number, number][], tag: string) => { const i = s.last?.startsWith(tag) ? +s.last.slice(1) : -1; return i >= 0 && i < cands.length ? [cands[i], ...cands.filter((_, j) => j !== i)] : cands; };
+        const bubEl = s.el.querySelector<HTMLElement>(".pin-bubble"), bw = bubEl?.offsetWidth || 250, bh = bubEl?.offsetHeight || 70;
+        const bubbleOf = (r: Rect): Rect => ({ x: r.x + r.w / 2 - bw / 2, y: r.y < 190 ? r.y + r.h + 12 : r.y - 12 - bh, w: bw, h: bh });
+        const place = (cands: [number, number][], w: number, h: number, withBubble = false) => { for (const [dx, dy] of cands) { const r = { x: sx + dx, y: sy + dy, w, h }; if (fits(r) && !taken.some((t) => overlaps(r, t)) && (!withBubble || !taken.some((t) => overlaps(bubbleOf(r), t)))) return r; } return null; };
+        const fs = sticky(full, "f"), ms = sticky(mini, "m");
+        box = place(fs, w, h, !!bubEl) ?? (bubEl ? place(fs, w, h) : null); if (box) { mode = "full"; s.last = "f" + full.indexOf(fs.find(([dx, dy]) => box!.x === sx + dx && box!.y === sy + dy)!); }
+        else { box = place(ms, MINI, MINI); if (box) { mode = "mini"; s.last = "m" + mini.indexOf(ms.find(([dx, dy]) => box!.x === sx + dx && box!.y === sy + dy)!); } }
+        // nowhere free: still show the face right on its spot (only the panels may hide it), never let an agent vanish
+        if (!box) { const r = { x: sx - MINI / 2, y: sy - MINI / 2, w: MINI, h: MINI }; if (fits(r) && !obstacles.current.rects.some((t) => overlaps(r, t))) { box = r; mode = "mini"; } }
       }
       if (box) taken.push(box);
+      // a speech bubble floats above its pin: reserve its box too so no other pin lands under it
+      const bub = mode === "full" ? s.el.querySelector<HTMLElement>(".pin-bubble") : null;
+      if (bub && box) { const bw = bub.offsetWidth || 250, bh = bub.offsetHeight || 70; taken.push({ x: box.x + box.w / 2 - bw / 2, y: box.y < 190 ? box.y + box.h + 12 : box.y - 12 - bh, w: bw, h: bh }); }
       if (s.el.dataset.mode !== mode) s.el.dataset.mode = mode;
       if (box) { s.el.style.transform = `translate3d(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px, 0)`; const flip = box.y < 190 ? "1" : ""; if ((s.el.dataset.flip ?? "") !== flip) s.el.dataset.flip = flip; }
+      if (box) pinRects.push(box);
       if (s.line) {
         const ex = box ? box.x + box.w / 2 : sx;
         const ey = box ? (box.y + box.h < sy ? box.y + box.h : box.y > sy ? box.y : box.y + box.h / 2) : sy;
         const show = box && Math.hypot(ex - sx, ey - sy) > 18;
-        s.line.style.opacity = show ? "0.85" : "0";
+        s.line.style.opacity = "0"; void show;   // no leader lines: the beacon on the ground already marks the spot
         s.line.setAttribute("x1", sx.toFixed(1)); s.line.setAttribute("y1", sy.toFixed(1)); s.line.setAttribute("x2", ex.toFixed(1)); s.line.setAttribute("y2", ey.toFixed(1));
       }
     }
@@ -289,7 +316,7 @@ function Pins({ entities, slots, hovered, selected, onHover, onSelect }: { entit
           <button key={e.coin.mint} type="button" data-mode="hidden" ref={(el) => { slot(e.coin.mint).el = el; }}
             className={`pin ${e.main ? "pin-main" : ""} ${e.coin.ring ? "pin-agent" : ""} ${hot ? "is-active" : ""}`} onClick={() => onSelect(e.coin.mint)}
             style={e.coin.ring ? ({ "--ring": e.coin.ring } as React.CSSProperties) : undefined}
-            onMouseEnter={() => onHover(e.coin.mint)} onMouseLeave={() => onHover(null)} title={e.coin.ring ? e.coin.name : `$${e.coin.ticker}`}>
+            onMouseEnter={() => onHover(e.coin.mint)} onMouseLeave={() => onHover(null)} aria-label={e.coin.ring ? e.coin.name : `$${e.coin.ticker}`}>
             {e.coin.bubble && <span key={e.coin.bubble.id} className={`pin-bubble is-${e.coin.bubble.kind}`}>{e.coin.bubble.text}</span>}
             <img src={e.coin.still} alt="" loading="lazy" />
             <span className="pin-text"><b>{e.coin.curve === "agent" ? e.coin.ticker : `$${e.coin.ticker}`}</b><i className={e.coin.change24h >= 0 ? "text-up" : "text-down"}>{pct(e.coin.change24h)}</i></span>

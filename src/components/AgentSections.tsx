@@ -1,5 +1,6 @@
 "use client";
-import { EXPLORER, ponsUrl, explorerToken } from "@/lib/brand";
+import { AssetLogo } from "./AssetLogo";
+import { EXPLORER, pumpUrl, explorerToken } from "@/lib/brand";
 import { useTown, avatar, portrait, first, eth, signed, ago } from "./town";
 
 /** Real asset prices the agents watch, scrolling like the old coin ticker. */
@@ -11,10 +12,10 @@ export function PriceTicker() {
     <div className="edge-fade overflow-hidden border-y border-line bg-deck">
       <div className="marquee flex w-max gap-6 py-2">
         {row.map((p, i) => (
-          <a key={i} href={p.kind === "pons" ? ponsUrl(p.token) : explorerToken(p.token)} target="_blank" rel="noreferrer" tabIndex={i >= prices.length ? -1 : undefined}
+          <a key={i} href={p.kind === "pump" ? pumpUrl(p.token) : explorerToken(p.token)} target="_blank" rel="noreferrer" tabIndex={i >= prices.length ? -1 : undefined}
             className="flex items-center gap-2 whitespace-nowrap text-sm transition-colors hover:text-sun">
-            <span className="font-bold">${p.symbol}</span>
-            <span className="text-haze">{p.fresh ? "new on Pons" : p.kind === "pons" ? "Pons" : "stock"}</span>
+            <span className="font-bold"><AssetLogo a={p} size={20} className="asset-logo-sm" />${p.symbol}</span>
+            <span className="text-haze">{p.fresh ? "new on pump.fun" : p.kind === "pump" ? "pump.fun" : "xStock"}</span>
             <span className={p.change >= 0 ? "text-up" : "text-down"}>{signed(p.change)}</span>
           </a>
         ))}
@@ -36,7 +37,7 @@ export function TradeStrip() {
           <img src={avatar(t.agent)} alt="" className="h-6 w-6 rounded-md" />
           <span className="font-bold">{name(t.agent)}</span>
           <span className="text-haze">{t.side === "buy" ? "bought" : "sold"}</span>
-          <span className="font-bold">${t.symbol}</span>
+          <span className="font-bold"><AssetLogo a={t} size={20} className="asset-logo-sm" />${t.symbol}</span>
           <span className={t.side === "buy" ? "text-up" : "text-down"}>{eth(t.eth)}</span>
           <span className="text-haze/70" suppressHydrationWarning>{ago(t.at)}</span>
         </li>
@@ -91,8 +92,8 @@ export function TradeLog() {
           <div className="min-w-0 flex-1">
             <p className="text-[14px]"><b style={{ color: ag(t.agent)?.color }}>{ag(t.agent)?.name}</b>{" "}
               <span className={t.side === "buy" ? "text-up" : "text-down"}>{t.side === "buy" ? "bought" : "sold"}</span>{" "}
-              <a className="font-bold hover:text-sun" href={t.kind === "pons" ? ponsUrl(t.token) : explorerToken(t.token)} target="_blank" rel="noreferrer">${t.symbol}</a>{" "}
-              <span className="text-haze" suppressHydrationWarning>{eth(t.eth)} at {t.price.toPrecision(4)} ETH · {t.mode === "real" && t.tx ? <a className="text-up" href={`${EXPLORER}/tx/${t.tx}`} target="_blank" rel="noreferrer">on chain ↗</a> : "paper"} · {ago(t.at)}</span></p>
+              <a className="font-bold hover:text-sun" href={t.kind === "pump" ? pumpUrl(t.token) : explorerToken(t.token)} target="_blank" rel="noreferrer"><AssetLogo a={t} size={20} className="asset-logo-sm" />${t.symbol}</a>{" "}
+              <span className="text-haze" suppressHydrationWarning>{eth(t.eth)} at {t.price.toPrecision(4)} SOL · {t.mode === "real" && t.tx ? <a className="text-up" href={`${EXPLORER}/tx/${t.tx}`} target="_blank" rel="noreferrer">on chain ↗</a> : "paper"} · {ago(t.at)}</span></p>
             <p className="mt-0.5 text-[14px] leading-[1.45] text-haze">{t.reason}</p>
           </div>
         </li>

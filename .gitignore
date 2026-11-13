@@ -20,3 +20,7 @@ x-launch-pack/
 .env*
 !.env.example
 brand/video/raw
+
+*.log
+.data/
+.data-db.log
