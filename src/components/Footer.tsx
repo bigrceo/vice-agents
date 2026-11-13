@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BRAND, OFFICIAL_MINT } from "@/lib/brand";
-import { InstagramIcon, TikTokIcon, XIcon } from "./icons";
+import { InstagramIcon, TikTokIcon, XIcon, GitHubIcon } from "./icons";
 
 const SHOTS: [string, string][] = [["/locals/lucia-poster.jpg", "50% 25%"], ["/footer/f0.webp", "50% 30%"], ["/footer/f5.webp", "60% 50%"], ["/footer/f2.webp", "40% 50%"], ["/footer/f3.webp", "50% 50%"], ["/footer/f1.webp", "45% 40%"], ["/locals/jason-poster.jpg", "50% 25%"]];
 
@@ -42,6 +42,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-wrap items-center gap-2">
           <a href={BRAND.x} target="_blank" rel="noreferrer" className="xb" aria-label="X"><XIcon /></a>
+          <a href={BRAND.github} target="_blank" rel="noreferrer" className="xb" aria-label="GitHub"><GitHubIcon /></a>
           <a href={BRAND.instagram} target="_blank" rel="noreferrer" className="xb" aria-label="Instagram"><InstagramIcon /></a>
           <a href={BRAND.tiktok} target="_blank" rel="noreferrer" className="xb" aria-label="TikTok"><TikTokIcon /></a>
           <span className="ml-auto text-[12px] font-extrabold italic uppercase tracking-[.14em] text-haze">State of Leonida · viceagents.fun</span>

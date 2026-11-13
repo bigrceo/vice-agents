@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BRAND, OFFICIAL_MINT } from "@/lib/brand";
 import { Logo } from "./Logo";
-import { RockstarIcon, XIcon } from "./icons";
+import { RockstarIcon, XIcon, GitHubIcon } from "./icons";
 
 export const GTA_VI_URL = "https://www.rockstargames.com/VI";
 
@@ -92,6 +92,7 @@ export function Header() {
             {OFFICIAL_MINT && <a href={`https://pump.fun/coin/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-ghost hidden sm:inline-flex">${BRAND.ticker}</a>}
             <a className="xb" href={GTA_VI_URL} target="_blank" rel="noreferrer" aria-label="GTA VI on Rockstar Games" title="GTA VI · Rockstar Games"><RockstarIcon /></a>
             <a className="xb" href={BRAND.x} target="_blank" rel="noreferrer" aria-label="X"><XIcon /></a>
+            <a className="xb" href={BRAND.github} target="_blank" rel="noreferrer" aria-label="GitHub"><GitHubIcon /></a>
             <Link href="/live" className="btn btn-hot hidden sm:inline-flex">Watch live</Link>
             <button className="mbtn" type="button" aria-label="Menu" aria-expanded={mobile} onClick={() => setMobile(!mobile)}><i /><i /></button>
           </div>
