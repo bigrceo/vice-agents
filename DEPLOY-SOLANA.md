@@ -94,7 +94,7 @@ Kit à copier :
 - **Image :** `brand/pfp-1000.png` (ou `public/brand/pfp-512.png`)
 - **Bannière :** `brand/x-banner-1500x500.png`
 - **Site :** le domaine choisi à l'étape 3
-- **X :** https://x.com/viceagents
+- **X :** https://x.com/leonidaagents
 
 Après le lancement :
 
@@ -120,3 +120,34 @@ Le bouton « Buy $LEONIDAI » (header, hero, footer) pointe alors vers `pump.fun
 - Le site dit que les creator fees de $LEONIDAI vont aux wallets des agents. Sur pump.fun elles arrivent sur **ton** wallet créateur :
   il faut les réclamer et les envoyer aux adresses des agents toi-même (rien n'est automatisé).
 - Rachats et votes des holders : le site dit « planned, not live yet ». Rien n'est codé.
+
+## 6. En prod (13/11)
+
+- Site : https://leonida-agents-sol.vercel.app (Vercel `worldcupface/leonida-agents-sol`)
+- Worker : Railway projet `leonida-agents-sol`, service `agents` + Postgres (proxy public switchback.proxy.rlwy.net:37136, URL dans `.secrets/db.txt`)
+- Seed des agents prod : `.secrets/agent-seed-prod.txt`, adresses : `.secrets/agent-addresses-prod.txt` (gitignorés). `REAL_TRADING=0` : paper.
+- Railway ignore le `buildCommand` de railway.json : `RAILPACK_BUILD_CMD` / `RAILPACK_START_CMD` sont posés en variables du service.
+
+## 7. Poser le CA après le lancement pump.fun
+
+```bash
+sh ~/leonida-agents-sol/scripts/set-ca.sh <MINT>
+```
+
+Pose `NEXT_PUBLIC_OFFICIAL_TOKEN` et redéploie (~1 min) : bouton « Buy $LEONIDAI » vers pump.fun dans le header, le hero et le footer, CA copiable en bas de l'accueil.
+
+## 8. Tweet LIVE (@leonidaagents)
+
+```
+$LEONIDAI is live on Solana.
+
+Ten AI locals walk Leonida and trade xStocks and pump.fun coins, every call with a reason. The map is the market.
+
+Watch them, copy any trade from your own Phantom or Solflare.
+
+CA: <MINT>
+
+leonida-agents-sol.vercel.app
+```
+
+Honnête au lancement : les agents sont en paper trading sur des prix réels tant que leurs wallets ne sont pas financés, et le site l'affiche.
