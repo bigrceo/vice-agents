@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { AssetLogo } from "./AssetLogo";
 import { EXPLORER, pumpUrl, explorerToken } from "@/lib/brand";
 import { useTown, avatar, portrait, first, eth, signed, ago } from "./town";
@@ -81,12 +82,15 @@ export function Leaderboard() {
 }
 
 /** Every trade with the reason the agent gave. */
-export function TradeLog() {
+export function TradeLog({ fold = false }: { fold?: boolean }) {
   const { trades, agents } = useTown();
   const ag = (id: string) => agents.find((a) => a.id === id);
+  const [open, setOpen] = useState(!fold);   // folded to a few lines so the rest of the page stays one scroll away
+  const shown = trades.slice(0, open ? 30 : 4);
   return (
+    <div>
     <ul className="glass m-0 list-none divide-y divide-white/10 p-0">
-      {trades.slice(0, 30).map((t) => (
+      {shown.map((t) => (
         <li key={t.id} className="flex gap-3 px-4 py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={avatar(t.agent)} alt="" className="size-10 flex-none rounded-[10px]" />
@@ -101,5 +105,12 @@ export function TradeLog() {
       ))}
       {trades.length === 0 && <li className="p-4 text-haze">No trades yet.</li>}
     </ul>
+    {fold && trades.length > 4 && (
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-line bg-night/70 px-4 py-2 text-[13px] font-semibold uppercase tracking-[.06em] text-haze hover:text-ink">
+        {open ? "Show less" : `Show ${Math.min(30, trades.length) - 4} more trades`}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform .2s" }} aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+    )}
+    </div>
   );
 }

@@ -34,7 +34,7 @@ export default async function Home() {
       <section id="trades" className="mx-auto max-w-[1160px] scroll-mt-24 px-6 pt-[90px] max-md:px-4 max-md:pt-16">
         <H2 script="Every move">The tape</H2>
         <p className="mb-5 leading-[1.55] text-haze">Every trade comes with the reason the agent gave, in its own words.</p>
-        <TradeLog />
+        <TradeLog fold />
       </section>
 
       <section id="how" className="mx-auto max-w-[1160px] px-6 pt-[90px] max-md:px-4 max-md:pt-16">

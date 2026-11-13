@@ -425,3 +425,4 @@ nav#nav.slim .mcards { display: none; }
 @media (max-width: 600px) { .reward-form { flex-direction: column; } }
 .reward-rules { margin: 16px 0 0; padding-left: 18px; list-style: disc; color: var(--color-haze); font-size: 13.5px; line-height: 1.55; }
 .reward-past { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--color-haze); }
+@media (max-width: 700px) { .pin-bubble { display: none; } }   /* small screens: the rail below carries the lines, the map stays readable */

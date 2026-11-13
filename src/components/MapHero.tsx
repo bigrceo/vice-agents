@@ -1,54 +1,19 @@
 "use client";
-import { MapPoster } from "./MapPoster";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { BRAND, OFFICIAL_MINT } from "@/lib/brand";
-import dynamic from "next/dynamic";
+import { StateMap } from "./MapShell";
 import { AgentRail } from "./AgentRail";
 import { MoneyFlow } from "./MoneyFlow";
 import { AgentDrawer } from "./AgentDrawer";
 import { agentAsCoin, useTown } from "./town";
-const StateMap = dynamic(() => import("./StateMap").then((m) => m.StateMap), { ssr: false, loading: () => <MapPoster /> });
 import { Countdown } from "./Countdown";
 
 /** Leonida-style hero: the state map full-bleed, a glass card on the left, the "on the map" rail on the right. */
 export function MapHero() {
   const town = useTown();
-  // the 3D map (WebGL + tiles) starts once the page is painted and idle, or at the first touch / scroll: the poster stands in until then
-  const [live3d, setLive3d] = useState(false);
-  useEffect(() => {
-    const go = () => setLive3d(true);
-    const evs = ["pointerdown", "touchstart", "wheel", "scroll", "keydown"] as const;
-    evs.forEach((e) => addEventListener(e, go, { once: true, passive: true }));
-    const idle = (window as any).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1200));
-    const t = setTimeout(() => idle(go, { timeout: 3000 }), matchMedia("(max-width: 767px)").matches ? 4000 : 1500);
-    return () => { clearTimeout(t); evs.forEach((e) => removeEventListener(e, go)); };
-  }, []);
-  // the worker moves them every few seconds; on screen they glide toward where they are heading
-  const shown = useRef(new Map<string, [number, number]>());
-  const [, frame] = useState(0);
-  useEffect(() => {
-    let raf = 0, last = 0;
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop);
-      if (t - last < 66) return; last = t;
-      let moved = false;
-      for (const a of town.agents) {
-        if (a.u == null) continue;
-        const p = shown.current.get(a.id);
-        if (!p) { shown.current.set(a.id, [a.u, a.v]); moved = true; continue; }
-        const du = a.u - p[0], dv = a.v - p[1];
-        if (Math.abs(du) + Math.abs(dv) > 1e-5) { p[0] += du * 0.12; p[1] += dv * 0.12; moved = true; }
-      }
-      if (moved) frame((n) => n + 1);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [town.agents]);
-  const coins = town.agents.filter((a) => a.u != null).map((a) => {
-    const p = shown.current.get(a.id);
-    return agentAsCoin(p ? { ...a, u: p[0], v: p[1] } : a, town.events);
-  });
+  // the worker moves them every few seconds; the map glides each agent to its new spot (map/pins walkTo)
+  const coins = useMemo(() => town.agents.filter((a) => a.u != null).map((a) => agentAsCoin(a, town.events)), [town.agents, town.events]);
   const [active, setActive] = useState<string | null>(null);
   const paper = town.agents.every((a) => a.mode === "paper");
   const [lead, tail] = BRAND.tagline.split(". ");
@@ -92,9 +57,9 @@ export function MapHero() {
   return (
     <section id="map" className="relative scroll-mt-0 md:-mt-[84px] md:h-[100svh] md:min-h-[680px] md:overflow-hidden max-md:flex max-md:flex-col max-md:pb-4">
       <div className="md:absolute md:inset-0 max-md:relative max-md:h-[64svh] max-md:min-h-[420px]">
-      {live3d ? <StateMap coins={coins} active={active} onActive={setActive}>
+      <StateMap coins={coins} active={active} onActive={setActive}>
         {active && coins.some((c) => c.mint === active) && <AgentDrawer id={active} onClose={() => setActive(null)} />}
-      </StateMap> : <div className="absolute inset-0"><MapPoster /></div>}
+      </StateMap>
       <div className="hidden md:contents">{card}{rail}</div>
       </div>
       {/* the sea melts into the page: no hard edge between the map and the rest of the site */}

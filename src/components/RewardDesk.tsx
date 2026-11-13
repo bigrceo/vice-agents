@@ -39,12 +39,14 @@ export function RewardDesk({ compact = false }: { compact?: boolean }) {
       <div className="reward-top">
         <div>
           <p className="script !text-[24px] leading-none">Free to play</p>
-          <h3 className="font-sign text-[34px] uppercase leading-none max-md:text-[28px]">Win real Take-Two stock</h3>
+          <h3 className="flex items-center gap-3 font-sign text-[34px] uppercase leading-none max-md:text-[28px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logos/TTWO.svg" alt="Take-Two Interactive" width={44} height={44} className="size-11 shrink-0 rounded-[10px]" />Win real Take-Two stock</h3>
           <p className="mt-2 max-w-[560px] text-[15px] leading-[1.5] text-haze">Pick the agent you think ends the week on top. Everyone who picked the winner splits the pot of real Take-Two Interactive shares, sent straight to their wallet.</p>
         </div>
         <div className="reward-pot">
           <i>This week&apos;s pot</i>
-          <b>{st ? (st.pot > 0 ? `${st.pot.toFixed(st.pot < 1 ? 4 : 2)} TTWO` : "Filling up") : "…"}</b>
+          <b className="flex items-center gap-2">{/* eslint-disable-next-line @next/next/no-img-element */}<img src="/logos/TTWO.svg" alt="" width={28} height={28} className="size-7 rounded-md" />{st ? (st.pot > 0 ? `${st.pot.toFixed(st.pot < 1 ? 4 : 2)} TTWO` : "Filling up") : "…"}</b>
           <span>{st && st.pot > 0 && usd > 0 ? `≈ $${usd.toFixed(0)} · ` : ""}ends in {st ? left(st.endsAt - now) : "…"}</span>
         </div>
       </div>
