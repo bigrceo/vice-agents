@@ -188,7 +188,7 @@ async function trade(a: Agent, me: any, pos: any[], t: { side: string; symbol: s
     qty = held.qty * (pct >= 0.55 ? 1 : pct); sol = fillOut(qty, px);
     if (mode === "real") ({ tx, qty, sol } = await sendReal(a, px, "sell", qty, pct >= 0.55));
     await sql`update la_agents set cash = cash + ${sol} where id = ${a.id}`;
-    await sql`update la_positions set qty = greatest(0, qty - ${qty}), cost = cost * greatest(0, 1 - ${qty / held.qty}) where agent_id = ${a.id} and symbol = ${sym}`;
+    await sql`update la_positions set qty = greatest(0, qty - ${qty}::float8), cost = cost * greatest(0, 1 - ${qty / held.qty}::float8) where agent_id = ${a.id} and symbol = ${sym}`;
   }
   await sql`insert into la_trades (agent_id, side, symbol, kind, token, qty, price, eth, reason, mode, tx) values (${a.id}, ${t.side}, ${sym}, ${px.kind}, ${px.token}, ${qty}, ${sol / qty}, ${sol}, ${String(t.reason ?? "").slice(0, 220)}, ${mode}, ${tx})`;
   await sql`insert into la_events (agent_id, kind, text, district) values (${a.id}, 'trade', ${`${t.side === "buy" ? "bought" : "sold"} ${sol.toFixed(3)} SOL of $${sym}: ${String(t.reason ?? "").slice(0, 160)}`}, ${me.district})`;
