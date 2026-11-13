@@ -131,8 +131,8 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 .pins { pointer-events: none; z-index: 5; position: absolute; inset: 0; overflow: hidden; }
 .pin-lines { width: 100%; height: 100%; position: absolute; inset: 0; }
 .pin-lines line { stroke: rgba(255,244,236,.75); stroke-width: 1.2px; stroke-dasharray: 3 3; opacity: 0; }
-.pin { will-change: transform; pointer-events: auto; cursor: pointer; white-space: nowrap; background: rgba(14,7,30,.82); border: 1.5px solid rgba(255,255,255,.55); border-radius: 999px; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; transition: border-color .15s, background .15s; display: flex; position: absolute; top: 0; left: 0; box-shadow: 0 6px 18px rgba(0,0,0,.45); color: var(--color-ink); }
-.pin[data-mode=hidden] { visibility: hidden; pointer-events: none; }
+.pin { will-change: transform; pointer-events: auto; cursor: pointer; white-space: nowrap; background: rgba(14,7,30,.82); border: 1.5px solid rgba(255,255,255,.55); border-radius: 999px; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; transition: border-color .15s, background .15s, opacity .35s ease; display: flex; position: absolute; top: 0; left: 0; box-shadow: 0 6px 18px rgba(0,0,0,.45); color: var(--color-ink); }
+.pin[data-mode=hidden] { opacity: 0; pointer-events: none; }
 .pin[data-mode=mini] { width: 34px; height: 34px; padding: 2px; }
 .pin[data-mode=mini] .pin-text { display: none; }
 .pin[data-mode=mini] img, .pin-main[data-mode=mini] img { width: 28px; height: 28px; }

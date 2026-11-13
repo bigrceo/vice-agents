@@ -243,7 +243,7 @@ function Controls({ entities, selected, api, onWorld }: { entities: Entity[]; se
 }
 
 // ---- HTML pins projected from the scene, dodging [data-pin-obstacle] boxes ----
-type Slot = { el: HTMLButtonElement | null; line: SVGLineElement | null; fullW: number; fullH: number; measuredAt: number; last?: string };
+type Slot = { el: HTMLButtonElement | null; line: SVGLineElement | null; fullW: number; fullH: number; measuredAt: number; last?: string; dx?: number; dy?: number };
 type Rect = { x: number; y: number; w: number; h: number };
 const GAP = 6, MINI = 34;
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w + GAP && a.x + a.w + GAP > b.x && a.y < b.y + b.h + GAP && a.y + a.h + GAP > b.y;
@@ -255,8 +255,9 @@ function PinLayout({ entities, slots, hovered, selected }: { entities: Entity[];
   const v = useMemo(() => new THREE.Vector3(), []);
   const obstacles = useRef<{ at: number; rects: Rect[] }>({ at: -1, rects: [] });
   const frame = useRef(0);
-  useFrame(() => {
+  useFrame((_, dt) => {
     frame.current++;
+    const glide = 1 - Math.exp(-Math.min(dt, 0.1) * 9);   // labels slide to a new spot instead of snapping there
     const base = dom.getBoundingClientRect();
     if (frame.current - obstacles.current.at > 15) obstacles.current = { at: frame.current, rects: [...document.querySelectorAll("[data-pin-obstacle]")].map((el) => { const r = el.getBoundingClientRect(); return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height }; }) };
     const taken = [...obstacles.current.rects];
@@ -295,7 +296,11 @@ function PinLayout({ entities, slots, hovered, selected }: { entities: Entity[];
       const bub = mode === "full" ? s.el.querySelector<HTMLElement>(".pin-bubble") : null;
       if (bub && box) { const bw = bub.offsetWidth || 250, bh = bub.offsetHeight || 70; taken.push({ x: box.x + box.w / 2 - bw / 2, y: box.y < 190 ? box.y + box.h + 12 : box.y - 12 - bh, w: bw, h: bh }); }
       if (s.el.dataset.mode !== mode) s.el.dataset.mode = mode;
-      if (box) { s.el.style.transform = `translate3d(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px, 0)`; const flip = box.y < 190 ? "1" : ""; if ((s.el.dataset.flip ?? "") !== flip) s.el.dataset.flip = flip; }
+      if (!box || s.el.dataset.mode === "hidden") { s.dx = undefined; s.dy = undefined; }
+      if (box) {
+        if (s.dx === undefined || s.dy === undefined || Math.hypot(box.x - s.dx, box.y - s.dy) > 400) { s.dx = box.x; s.dy = box.y; }
+        else { s.dx += (box.x - s.dx) * glide; s.dy += (box.y - s.dy) * glide; }
+        s.el.style.transform = `translate3d(${s.dx.toFixed(1)}px, ${s.dy.toFixed(1)}px, 0)`; const flip = box.y < 190 ? "1" : ""; if ((s.el.dataset.flip ?? "") !== flip) s.el.dataset.flip = flip; }
       if (box) pinRects.push(box);
       if (s.line) {
         const ex = box ? box.x + box.w / 2 : sx;
