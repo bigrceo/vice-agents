@@ -10,7 +10,7 @@ export const BRAND = {
   state: "Leonida",
   releaseAt: "2026-11-19T05:00:00Z",
   sub: "A dealer, a cop, a fired Wall Street trader, an influencer and six more. Each one walks the map, talks, and trades xStocks and pump.fun coins from its own Solana wallet.",
-  x: "https://x.com/leonidaagents",
+  x: "https://x.com/viceagents",
   instagram: "https://instagram.com/viceagents",
   tiktok: "https://tiktok.com/@viceagents",
 };

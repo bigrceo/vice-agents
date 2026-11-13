@@ -94,7 +94,7 @@ Kit à copier :
 - **Image :** `brand/pfp-1000.png` (ou `public/brand/pfp-512.png`)
 - **Bannière :** `brand/x-banner-1500x500.png`
 - **Site :** le domaine choisi à l'étape 3
-- **X :** https://x.com/leonidaagents
+- **X :** https://x.com/viceagents
 
 Après le lancement :
 
