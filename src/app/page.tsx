@@ -6,6 +6,7 @@ import { PriceTicker, Leaderboard, TradeLog } from "@/components/AgentSections";
 import { Countdown } from "@/components/Countdown";
 import { CopyCA } from "@/components/CopyCA";
 import { StepArt } from "@/components/StepArt";
+import { RewardDesk } from "@/components/RewardDesk";
 
 export const revalidate = 5;   // served from the CDN, rebuilt in the background; the page polls for live data anyway
 
@@ -19,6 +20,10 @@ export default async function Home() {
     <TownProvider initial={town}>
       <MapHero />
       <PriceTicker />
+
+      <section id="reward" className="mx-auto max-w-[1160px] scroll-mt-24 px-6 pt-[60px] max-md:px-4">
+        <RewardDesk />
+      </section>
 
       <section id="agents" className="mx-auto max-w-[1680px] scroll-mt-24 px-6 pt-[60px] max-md:px-4">
         <H2 script="Who runs">The town</H2>

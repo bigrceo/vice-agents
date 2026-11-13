@@ -86,6 +86,7 @@ export function Header() {
             <Link href="/leaderboard" className={path.startsWith("/leaderboard") ? "on" : ""} onMouseEnter={() => open(null)}>Leaderboard</Link>
             <Link href="/trades" className={path.startsWith("/trades") ? "on" : ""} onMouseEnter={() => open(null)}>Trades</Link>
             <Link href="/how" className={path.startsWith("/how") ? "on" : ""} onMouseEnter={() => open(null)}>How it works</Link>
+            <Link href="/reward" className={path.startsWith("/reward") ? "on" : ""} onMouseEnter={() => open(null)}>Rewards</Link>
           </div>
           <div className="navr">
             {OFFICIAL_MINT && <a href={`https://pump.fun/coin/${OFFICIAL_MINT}`} target="_blank" rel="noreferrer" className="btn btn-ghost hidden sm:inline-flex">${BRAND.ticker}</a>}

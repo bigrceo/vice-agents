@@ -6,7 +6,8 @@
  * Amounts are SOL. Column names (`cash`, `eth`) are kept from the Robinhood build.
  */
 import postgres from "postgres";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import { TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync, createAssociatedTokenAccountIdempotentInstruction, createTransferCheckedInstruction } from "@solana/spl-token";
 import { CAST, type Agent } from "../src/lib/agents/cast";
 import { SECTORS, sectorOf } from "../src/lib/agents/sectors";
 import { DISTRICTS } from "../src/components/map/districts";
@@ -217,6 +218,62 @@ async function sendReal(a: Agent, px: Px, side: "buy" | "sell", amount: number, 
     : { tx: r.signature, qty: Number(r.spent) / dec, sol: Number(r.received) / LAMPORTS };
 }
 
+// ---------------- weekly Take-Two reward ----------------
+// The agent with the best week wins; everyone who picked it shares the TTWO in the reward wallet (seed index 100). TTWO on Solana is
+// Backpack's Token-2022 mint (accounts open unfrozen, transfer hook off), so a payout is: create the picker's ATA, transferChecked.
+// Live buys and sends only with REWARDS_LIVE=1: before that the worker records what each picker would get ('preview').
+const TTWO = new PublicKey("TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo"), TTWO_DEC = 6;
+const SITE = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://leonida-agents-sol.vercel.app";
+const wkStart = (t = Date.now()) => { const d = new Date(t); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - ((d.getUTCDay() + 6) % 7) * 86_400_000; };
+const wkId = (t = Date.now()) => new Date(wkStart(t)).toISOString().slice(0, 10);
+const tokenUnits = async (owner: PublicKey, mint: PublicKey) =>
+  (await connection().getParsedTokenAccountsByOwner(owner, { mint }).catch(() => ({ value: [] as any[] }))).value.reduce((s, a) => s + BigInt(a.account.data.parsed.info.tokenAmount.amount), 0n);
+async function settleRewards() {
+  const prev = wkId(Date.now() - 7 * 86_400_000);
+  if (Date.now() - wkStart() < 10 * 60_000) return;   // let the new week's snapshot land first
+  await sql`create table if not exists la_rewards (week text primary key, winner text, pot double precision, pickers int, per double precision, status text, txs jsonb, at timestamptz default now())`;
+  await sql`create table if not exists la_picks (week text, address text, agent text, at timestamptz default now(), primary key (week, address))`;
+  const [done] = await sql`select status from la_rewards where week = ${prev}`;
+  const live = process.env.REWARDS_LIVE === "1";
+  if (done && (done.status !== "preview" || !live)) return;
+  const fin = await fetch(`${SITE}/api/rewards/final?week=${prev}`).then((r) => r.json());
+  const winner = fin.standings?.[0]?.id as string | undefined; if (!winner) return;
+  const picks = await sql`select address from la_picks where week = ${prev} and agent = ${winner}`;
+  const kp = agentKeypair(100), me = kp.publicKey;
+  const mint = process.env.NEXT_PUBLIC_OFFICIAL_TOKEN, minHold = BigInt(process.env.LOCALS_MIN_HOLD || 1_000_000) * 10n ** 6n;   // pump.fun coins have 6 decimals
+  const weights = await Promise.all(picks.map(async (p) => mint ? ((await tokenUnits(new PublicKey(p.address), new PublicKey(mint))) >= minHold ? 2n : 1n) : 1n));
+  const txs: { to: string; amount: string; tx: string }[] = [];
+  if (live) {
+    // creator fees → TTWO: keep a SOL reserve (fees + ~0.0021 SOL rent per new picker account), swap a share of the rest
+    const sol = BigInt(await connection().getBalance(me)), reserve = BigInt(Math.round(Number(process.env.REWARD_RESERVE_SOL || "0.05") * LAMPORTS));
+    const spend = sol > reserve ? (sol - reserve) * BigInt(Math.round(Number(process.env.REWARD_SHARE || "0.5") * 100)) / 100n : 0n;
+    if (spend > BigInt(0.005 * LAMPORTS)) {
+      const token = await tokenByMint(TTWO.toBase58());
+      if (token) await executePlan(await planSwap({ side: "buy", token, quote: "SOL", amount: spend, slippageBps: 150 }), me.toBase58(), signerOf(kp)).catch((e) => console.error("ttwo buy", e.message));
+    }
+  }
+  const bal = await tokenUnits(me, TTWO), human = Number(bal) / 10 ** TTWO_DEC;
+  const total = weights.reduce((a, b) => a + b, 0n);
+  if (!picks.length || bal === 0n) {
+    await sql`insert into la_rewards (week, winner, pot, pickers, per, status, txs) values (${prev}, ${winner}, ${human}, ${picks.length}, 0, ${picks.length ? "empty" : "rollover"}, '[]') on conflict (week) do update set status = excluded.status`;
+    return console.log(`reward ${prev}: ${winner} won, ${picks.length} pickers, pot ${human} TTWO, nothing sent`);
+  }
+  const unit = bal / total, from = getAssociatedTokenAddressSync(TTWO, me, false, TOKEN_2022_PROGRAM_ID);
+  if (live) for (let i = 0; i < picks.length; i++) {
+    const amount = unit * weights[i]; if (amount === 0n) continue;
+    const owner = new PublicKey(picks[i].address), to = getAssociatedTokenAddressSync(TTWO, owner, true, TOKEN_2022_PROGRAM_ID);
+    const tx = new Transaction().add(
+      createAssociatedTokenAccountIdempotentInstruction(me, to, owner, TTWO, TOKEN_2022_PROGRAM_ID),
+      createTransferCheckedInstruction(from, TTWO, to, me, amount, TTWO_DEC, [], TOKEN_2022_PROGRAM_ID));
+    const sig = await connection().sendTransaction(tx, [kp]).catch((e) => { console.error("ttwo send", e.message); return ""; });
+    txs.push({ to: picks[i].address, amount: String(Number(amount) / 10 ** TTWO_DEC), tx: sig });
+  }
+  await sql`insert into la_rewards (week, winner, pot, pickers, per, status, txs) values (${prev}, ${winner}, ${human}, ${picks.length}, ${Number(unit) / 10 ** TTWO_DEC}, ${live ? "paid" : "preview"}, ${sql.json(txs)})
+    on conflict (week) do update set pot = excluded.pot, pickers = excluded.pickers, per = excluded.per, status = excluded.status, txs = excluded.txs, at = now()`;
+  await sql`insert into la_events (agent_id, kind, text, district) values (${winner}, 'reward', ${`won the week: ${picks.length} pickers ${live ? "got" : "would get"} ${human.toFixed(4)} Take-Two shares`}, ${null})`;
+  console.log(`reward ${prev}: ${winner}, ${picks.length} pickers, ${live ? "paid" : "preview"}`);
+}
+
 // ---------------- main ----------------
 async function main() {
   account(CAST[0]);   // fails fast without a valid AGENT_SEED
@@ -224,6 +281,7 @@ async function main() {
   await refreshPrices();
   setInterval(() => refreshPrices().catch((e) => console.error("prices", e.message)), PRICE_MS);
   setInterval(() => walk().catch((e) => console.error("walk", e.message)), STEP_MS);
+  setInterval(() => settleRewards().catch((e) => console.error("rewards", e.message)), 10 * 60_000);
   let i = Math.floor(Math.random() * CAST.length);
   const tick = async () => {
     const a = CAST[i++ % CAST.length];
