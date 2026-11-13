@@ -123,7 +123,7 @@ Le bouton « Buy $LEONIDAI » (header, hero, footer) pointe alors vers `pump.fun
 
 ## 6. En prod (13/11)
 
-- Site : https://leonida-agents-sol.vercel.app (Vercel `worldcupface/leonida-agents-sol`)
+- Site : https://viceagents.fun (Vercel `worldcupface/leonida-agents-sol`)
 - Worker : Railway projet `leonida-agents-sol`, service `agents` + Postgres (proxy public switchback.proxy.rlwy.net:37136, URL dans `.secrets/db.txt`)
 - Seed des agents prod : `.secrets/agent-seed-prod.txt`, adresses : `.secrets/agent-addresses-prod.txt` (gitignorés). `REAL_TRADING=0` : paper.
 - Railway ignore le `buildCommand` de railway.json : `RAILPACK_BUILD_CMD` / `RAILPACK_START_CMD` sont posés en variables du service.
@@ -147,7 +147,7 @@ Watch them, copy any trade from your own Phantom or Solflare.
 
 CA: <MINT>
 
-leonida-agents-sol.vercel.app
+viceagents.fun
 ```
 
 Honnête au lancement : les agents sont en paper trading sur des prix réels tant que leurs wallets ne sont pas financés, et le site l'affiche.

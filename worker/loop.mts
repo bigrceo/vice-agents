@@ -60,7 +60,7 @@ const toPx = (m: Mkt, fresh = false): Px => ({ symbol: m.symbol, kind: m.kind, t
 /** Ask the site for every new coin's logo once: the proxy stores a thumbnail in la_logos, so visitors never wait on IPFS. */
 const warmed = new Set<string>();
 async function warmLogos() {
-  const site = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://leonida-agents-sol.vercel.app";
+  const site = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://viceagents.fun";
   const rows = await sql`select distinct token from la_prices where kind = 'pump'`;
   for (const { token } of rows) {
     if (warmed.has(token)) continue;
@@ -236,7 +236,7 @@ async function sendReal(a: Agent, px: Px, side: "buy" | "sell", amount: number, 
 // Backpack's Token-2022 mint (accounts open unfrozen, transfer hook off), so a payout is: create the picker's ATA, transferChecked.
 // Live buys and sends only with REWARDS_LIVE=1: before that the worker records what each picker would get ('preview').
 const TTWO = new PublicKey("TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo"), TTWO_DEC = 6;
-const SITE = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://leonida-agents-sol.vercel.app";
+const SITE = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://viceagents.fun";
 const wkStart = (t = Date.now()) => { const d = new Date(t); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - ((d.getUTCDay() + 6) % 7) * 86_400_000; };
 const wkId = (t = Date.now()) => new Date(wkStart(t)).toISOString().slice(0, 10);
 const tokenUnits = async (owner: PublicKey, mint: PublicKey) =>
