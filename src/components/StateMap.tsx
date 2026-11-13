@@ -61,12 +61,16 @@ function Ground({ onReady, mode }: { onReady: () => void; mode: Mode }) {
 }
 
 /** Where each beacon stands right now: agents glide toward their new spot instead of jumping on every poll. Pins read it too. */
-const walk = new Map<string, THREE.Vector3>();
+const walk = new Map<string, THREE.Vector3>(), speed = new Map<string, number>();
 function walkTo(e: Entity, dt: number) {
   const [bx, , bz] = toWorld(e.plot.u, e.plot.v);
   const k0 = e.coin.ring ? Math.max(0, CAST.findIndex((c) => c.id === e.coin.mint)) * 0.628 : 0, x = bx + (e.coin.ring ? Math.cos(k0) * 0.32 : 0), z = bz + (e.coin.ring ? Math.sin(k0) * 0.22 : 0);   // each local keeps its own spot around a district
   let p = walk.get(e.coin.mint); if (!p) { p = new THREE.Vector3(x, 0, z); walk.set(e.coin.mint, p); }
-  const k = 1 - Math.exp(-dt * 1.2); p.x += (x - p.x) * k; p.z += (z - p.z) * k; return p;
+  // A walk, not a lurch: ease in up to a steady pace, then slow down on arrival (~1 map unit per second at full pace).
+  const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz), s = Math.min(dt, 0.1);
+  if (d < 0.002) { speed.set(e.coin.mint, 0); return p; }
+  const v = (speed.get(e.coin.mint) ?? 0) + (Math.min(1, d * 1.2) - (speed.get(e.coin.mint) ?? 0)) * (1 - Math.exp(-s * 2.5));
+  speed.set(e.coin.mint, v); const step = Math.min(d, v * s); p.x += dx / d * step; p.z += dz / d * step; return p;
 }
 
 function Beacon({ e, active, onHover, onSelect }: { e: Entity; active: boolean; onHover: (m: string | null) => void; onSelect: () => void }) {
