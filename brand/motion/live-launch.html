@@ -27,7 +27,8 @@
 <div class=sc id=s1><div class=sky style="filter:brightness(.55)"></div><div class=floor style="top:520px"></div><div id=cards></div><div class=big id=t1 style="top:40px;font-size:96px">TEN AI LOCALS</div></div>
 <div class=sc id=s2><div class=sky style="background:radial-gradient(circle at 50% 55%,#ff3d8b 0%,#5b1a7a 45%,#120530 100%)"></div><div id=coins></div><div class=big id=t2 style="top:270px;font-size:110px">THEY TRADE<br>THE TRENCHES</div></div>
 <div class=sc id=s3><div class=map id=map></div><div class=veil></div><div id=pins></div><div class=big id=t3 style="top:560px;font-size:96px">THE MAP IS THE MARKET</div></div>
-<div class=sc id=s4><div class=sky></div><div class=sun style="top:470px"></div><div class=floor style="top:500px"></div><div class=grid id=grid4 style="top:500px"></div><div class=script id=t4a style="top:130px;font-size:60px">the town is live</div><div class=big id=t4 style="top:200px;font-size:170px">VICE AGENTS</div><div id=t4c style="position:absolute;top:410px;width:100%;text-align:center;color:#fff;font:800 40px Inter;letter-spacing:.04em;text-shadow:0 4px 20px #0d0720">viceagents.fun</div></div>
+<div class=sc id=s4><div id=bg4 style="position:absolute;inset:-6%;background:url(file:///Users/rayane/leonida-agents-sol/public/locals/ocean-drive-bokeh.jpg) center/cover;filter:saturate(1.3)"></div><div style="position:absolute;inset:0;background:linear-gradient(180deg,#1a0838cc 0%,#5b1a7a99 40%,#d8327a88 75%,#ff8a3dbb 100%)"></div><div class=veil></div><div class=script id=t4a style="top:120px;font-size:60px">the town is live</div><div class=big id=t4 style="top:190px;font-size:170px">VICE AGENTS</div><div id=t4c style="position:absolute;top:400px;width:100%;text-align:center;color:#fff;font:800 40px Inter;letter-spacing:.04em;text-shadow:0 4px 20px #0d0720">viceagents.fun</div><div id=row4></div></div>
+<style>.mini{position:absolute;top:500px;width:84px;height:84px;border-radius:50%;overflow:hidden;border:3px solid #ffd36e;box-shadow:0 10px 24px #0009}.mini img{width:100%;height:100%;object-fit:cover}</style>
 <div class=sc id=s5><div class=sky style="background:radial-gradient(circle at 50% 45%,#7a1f8f 0%,#2a0b4a 55%,#0d0720 100%)"></div><div class=script id=t5a style="top:28px;font-size:54px">free to play, every week</div><div class=big id=t5 style="top:88px;font-size:84px">PICK THE WEEK'S WINNER</div><div id=faces></div><div class=big id=t5b style="top:560px;font-size:92px;color:#ffd36e;text-shadow:0 8px 0 #0d0720,0 0 50px #ffb347">WIN REAL TAKE-TWO STOCK</div></div>
 <style>.face{position:absolute;width:128px;height:128px;border-radius:50%;overflow:hidden;border:4px solid #ffffff55;box-shadow:0 14px 30px #0008}.face img{width:100%;height:100%;object-fit:cover}.face.on{border-color:#ffd36e;box-shadow:0 0 0 6px #ffd36e,0 0 60px #ffb347}</style>
 <script>
@@ -39,12 +40,12 @@ coins.innerHTML=LOGOS.map((k,i)=>'<div class=coin id=k'+i+'><img src="file:///pr
 const P=[[.31,.38],[.52,.30],[.44,.55],[.63,.47],[.25,.62],[.70,.25],[.38,.25],[.57,.66]];
 pins.innerHTML=P.map((p,i)=>'<div class=ring id=r'+i+'></div><div class=pin id=p'+i+'><img src="file://'+R+'/public/agents/'+IDS[i]+'.jpg"></div>').join('');
 const E=x=>x<0?0:x>1?1:1-Math.pow(1-x,3), clamp=x=>Math.max(0,Math.min(1,x)), win=(t,a,b,f=.35)=>clamp((t-a)/f)*clamp((b-t)/f);
+row4.innerHTML=IDS.map((id,i)=>'<div class=mini id=m'+i+'><img src="file://'+R+'/public/agents/'+id+'.jpg"></div>').join('');
 faces.innerHTML=IDS.map((id,i)=>'<div class=face id=f'+i+'><img src="file://'+R+'/public/agents/'+id+'.jpg"></div>').join('');
 const SC={s1:[0,4],s2:[3.7,7],s3:[6.7,10.2],s5:[9.9,14.4],s4:[14.1,18]};
 window.render=t=>{
  $('s0').style.opacity=0;
  for(const k in SC){const [a,b]=SC[k];$(k).style.opacity=k=='s1'?clamp((b-t)/.35):k=='s4'?clamp((t-a)/.35):win(t,a,b)}
- $('grid4').style.backgroundPosition='0 '+(t*120)+'px';
  const u=t+0.4; IDS.forEach((_,i)=>{const c=$('c'+i),d=clamp((u-i*0.15)/0.55),x=140+i*205-u*110,y=210+Math.sin(i*1.7)*18+(1-E(d))*500,r=(i-4.5)*2.2*(1-E(d)*.6);
   c.style.transform='translate('+x+'px,'+y+'px) rotate('+r+'deg)';c.style.opacity=E(d)});
  $('t1').style.transform='translateY('+(-40*(1-E(u/.6)))+'px)';$('t1').style.opacity=clamp(u/.4);
@@ -62,7 +63,7 @@ window.render=t=>{
  IDS.forEach((_,i)=>$('f'+i).classList.toggle('on',i===on));
  $('t5a').style.opacity=clamp(q/.4);$('t5').style.opacity=clamp((q-.1)/.4);$('t5').style.transform='translateY('+(-30*(1-E(q/.5)))+'px)';
  const g=clamp((q-2.6)/.4);$('t5b').style.opacity=g;$('t5b').style.transform='scale('+(1.35-.35*E((q-2.6)/.5)+0.015*Math.max(0,q-3.1))+')';
- const z=t-14.1; $('t4a').style.opacity=clamp((z-.2)/.4);$('t4').style.transform='scale('+(1.3-.3*E(z/.7))+')';$('t4').style.opacity=clamp(z/.3);$('t4c').style.opacity=clamp((z-.8)/.4);
+ const z=t-14.1; $('t4a').style.opacity=clamp((z-.2)/.4);$('t4').style.transform='scale('+(1.3-.3*E(z/.7))+')';$('t4').style.opacity=clamp(z/.3);$('t4c').style.opacity=clamp((z-.8)/.4);$('bg4').style.transform='scale('+(1.08-0.02*z)+')';IDS.forEach((_,i)=>{const d=E(clamp((z-1-i*.07)/.35)),m=$('m'+i);m.style.left=(640-5*96+i*96+6)+'px';m.style.transform='translateY('+(40*(1-d))+'px)';m.style.opacity=d});
 };
 render(0);
 </script></body></html>
