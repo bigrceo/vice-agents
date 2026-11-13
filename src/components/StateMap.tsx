@@ -66,10 +66,14 @@ function walkTo(e: Entity, dt: number) {
   const [bx, , bz] = toWorld(e.plot.u, e.plot.v);
   const k0 = e.coin.ring ? Math.max(0, CAST.findIndex((c) => c.id === e.coin.mint)) * 0.628 : 0, x = bx + (e.coin.ring ? Math.cos(k0) * 0.32 : 0), z = bz + (e.coin.ring ? Math.sin(k0) * 0.22 : 0);   // each local keeps its own spot around a district
   let p = walk.get(e.coin.mint); if (!p) { p = new THREE.Vector3(x, 0, z); walk.set(e.coin.mint, p); }
-  // A walk, not a lurch: ease in up to a steady pace, then slow down on arrival (~1 map unit per second at full pace).
-  const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz), s = Math.min(dt, 0.1);
-  if (d < 0.002) { speed.set(e.coin.mint, 0); return p; }
-  const v = (speed.get(e.coin.mint) ?? 0) + (Math.min(1, d * 1.2) - (speed.get(e.coin.mint) ?? 0)) * (1 - Math.exp(-s * 2.5));
+  // A walk, not a lurch: ease in, keep a steady pace, slow down on arrival.
+  // Standing still is a slow stroll around the spot, so every local keeps moving a little.
+  const seed = [...e.coin.mint].reduce((h, c) => h + c.charCodeAt(0), 0), t = performance.now() / 1000;
+  const dx = x + Math.sin(t * 0.07 + seed) * 0.08 - p.x, dz = z + Math.cos(t * 0.05 + seed * 1.7) * 0.06 - p.z, d = Math.hypot(dx, dz), s = Math.min(dt, 0.1);
+  if (d < 1e-4) return p;
+  // Human pace: a short hop is walked (~0.05 map unit/s), a trip across town is driven (~0.2/s). Nobody crosses the map in a second.
+  const pace = d > 1.2 ? 0.2 : 0.05;
+  const v = (speed.get(e.coin.mint) ?? 0) + (Math.min(pace, d * 0.5) - (speed.get(e.coin.mint) ?? 0)) * (1 - Math.exp(-s * 1.5));
   speed.set(e.coin.mint, v); const step = Math.min(d, v * s); p.x += dx / d * step; p.z += dz / d * step; return p;
 }
 
