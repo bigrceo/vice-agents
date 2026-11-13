@@ -14,6 +14,16 @@ import { Countdown } from "./Countdown";
 /** Leonida-style hero: the state map full-bleed, a glass card on the left, the "on the map" rail on the right. */
 export function MapHero() {
   const town = useTown();
+  // the 3D map (WebGL + tiles) starts once the page is painted and idle, or at the first touch / scroll: the poster stands in until then
+  const [live3d, setLive3d] = useState(false);
+  useEffect(() => {
+    const go = () => setLive3d(true);
+    const evs = ["pointerdown", "touchstart", "wheel", "scroll", "keydown"] as const;
+    evs.forEach((e) => addEventListener(e, go, { once: true, passive: true }));
+    const idle = (window as any).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1200));
+    const t = setTimeout(() => idle(go, { timeout: 3000 }), matchMedia("(max-width: 767px)").matches ? 4000 : 1500);
+    return () => { clearTimeout(t); evs.forEach((e) => removeEventListener(e, go)); };
+  }, []);
   // the worker moves them every few seconds; on screen they glide toward where they are heading
   const shown = useRef(new Map<string, [number, number]>());
   const [, frame] = useState(0);
@@ -82,9 +92,9 @@ export function MapHero() {
   return (
     <section id="map" className="relative scroll-mt-0 md:-mt-[84px] md:h-[100svh] md:min-h-[680px] md:overflow-hidden max-md:flex max-md:flex-col max-md:pb-4">
       <div className="md:absolute md:inset-0 max-md:relative max-md:h-[64svh] max-md:min-h-[420px]">
-      <StateMap coins={coins} active={active} onActive={setActive}>
+      {live3d ? <StateMap coins={coins} active={active} onActive={setActive}>
         {active && coins.some((c) => c.mint === active) && <AgentDrawer id={active} onClose={() => setActive(null)} />}
-      </StateMap>
+      </StateMap> : <div className="absolute inset-0"><MapPoster /></div>}
       <div className="hidden md:contents">{card}{rail}</div>
       </div>
       {/* the sea melts into the page: no hard edge between the map and the rest of the site */}

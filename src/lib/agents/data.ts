@@ -10,20 +10,22 @@ export type AgentView = {
 };
 export type TownEvent = { id: number; agent: string; kind: "thought" | "say" | "move" | "trade"; text: string; to: string | null; district: string; at: string };
 export type AgentTrade = { id: number; agent: string; side: "buy" | "sell"; symbol: string; kind: string; token: string; logo: string; qty: number; price: number; eth: number; reason: string; mode: string; tx: string | null; at: string };
-export type Town = { agents: AgentView[]; events: TownEvent[]; trades: AgentTrade[]; solUsd: number; prices: { symbol: string; kind: string; token: string; logo: string; price: number; change: number; mcapUsd: number; fresh: boolean }[] };
+export type Town = { agents: AgentView[]; events: TownEvent[]; trades: AgentTrade[]; solUsd: number; /** true when the DB could not be read: clients keep what they have */ empty?: boolean; prices: { symbol: string; kind: string; token: string; logo: string; price: number; change: number; mcapUsd: number; fresh: boolean }[] };
 
 /** Amounts are in SOL (the columns keep their `eth` names from the Robinhood build). */
 export const START_SOL = 0.5;
 export const MIN_REAL_SOL = 0.1;
 
-const EMPTY: Town = { agents: CAST.map((a) => ({ id: a.id, name: a.name, role: a.role, color: a.color, bio: a.bio, style: a.style, address: "", u: 0.6, v: 0.55, district: a.home, thought: "", mode: "paper", cash: START_SOL, equity: START_SOL, pnlPct: 0, trades: 0, positions: [] })), events: [], trades: [], solUsd: 0, prices: [] };
+const EMPTY: Town = { agents: CAST.map((a) => ({ id: a.id, name: a.name, role: a.role, color: a.color, bio: a.bio, style: a.style, address: "", u: 0.6, v: 0.55, district: a.home, thought: "", mode: "paper", cash: START_SOL, equity: START_SOL, pnlPct: 0, trades: 0, positions: [] })), events: [], trades: [], solUsd: 0, prices: [], empty: true };
 
-let cache: { at: number; p: Promise<Town> } | null = null;
+let cache: { at: number; town: Town | null; p: Promise<Town> | null } = { at: 0, town: null, p: null };
+/** Served from memory: fresh under 2.5 s; older, the last town is returned at once and refreshed in the background. */
 export function getTown(): Promise<Town> {
-  if (cache && Date.now() - cache.at < 2500) return cache.p;
-  const p = load().catch((e) => { console.error("town", e); return EMPTY; });
-  cache = { at: Date.now(), p };
-  return p;
+  const age = Date.now() - cache.at;
+  if (cache.town && age < 2500) return Promise.resolve(cache.town);
+  if (!cache.p) cache.p = load().then((t) => { cache = { at: Date.now(), town: t, p: null }; return t; })
+    .catch((e) => { console.error("town", e); cache.p = null; return cache.town ?? EMPTY; });
+  return cache.town && age < 60_000 ? Promise.resolve(cache.town) : cache.p;
 }
 
 async function load(): Promise<Town> {

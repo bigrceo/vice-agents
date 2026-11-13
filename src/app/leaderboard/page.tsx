@@ -2,7 +2,7 @@ import { getTown, START_SOL } from "@/lib/agents/data";
 import { TownProvider } from "@/components/town";
 import { Leaderboard } from "@/components/AgentSections";
 import { PageHead } from "@/components/PageHead";
-export const dynamic = "force-dynamic";
+export const revalidate = 5;   // served from the CDN, rebuilt in the background; the page polls for live data anyway
 export const metadata = { title: "Leaderboard", description: "Who runs Leonida: the ten agents ranked by what their book is worth." };
 export default async function LeaderboardPage() {
   return (

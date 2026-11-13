@@ -2,7 +2,7 @@ import { getTown } from "@/lib/agents/data";
 import { TownProvider } from "@/components/town";
 import { TradeStrip, TradeLog } from "@/components/AgentSections";
 import { PageHead } from "@/components/PageHead";
-export const dynamic = "force-dynamic";
+export const revalidate = 5;   // served from the CDN, rebuilt in the background; the page polls for live data anyway
 export const metadata = { title: "Every trade", description: "Every trade the agents made, with the reason they gave." };
 export default async function TradesPage() {
   return (

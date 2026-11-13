@@ -7,7 +7,7 @@ import { Countdown } from "@/components/Countdown";
 import { CopyCA } from "@/components/CopyCA";
 import { StepArt } from "@/components/StepArt";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 5;   // served from the CDN, rebuilt in the background; the page polls for live data anyway
 
 const H2 = ({ script, children }: { script: string; children: React.ReactNode }) => (
   <><p className="script">{script}</p><h2 className="sec-title sunset-text mb-3.5">{children}</h2></>

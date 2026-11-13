@@ -11,7 +11,7 @@ export function TownProvider({ initial, children }: { initial: Town; children: R
     const t = setInterval(async () => {
       if (document.hidden) return;
       const r = await fetch("/api/town", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
-      if (r?.agents) setTown(r);
+      if (r?.agents && !r.empty) setTown(r);
     }, 4000);
     return () => clearInterval(t);
   }, []);

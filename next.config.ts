@@ -12,6 +12,8 @@ const config: NextConfig = {
       { source: "/locals/:file(.+\\.(?:jpg|jpeg|png|webp|mp4))", headers: day },
       { source: "/map/:path*", headers: day },
       { source: "/brand/:path*", headers: day },
+      { source: "/agents/:file(.+\\.jpg)", headers: day },
+      { source: "/logos/:path*", headers: day },
     ];
   },
 };

@@ -18,7 +18,7 @@ export function LiveBoard({ initial, agent = "dez" }: { initial: Live; agent?: s
   const [live, setLive] = useState(initial);
   const [cam, setCam] = useState<string | null>(agent);   // land on one agent, so the Follow button is the first thing you see
   useEffect(() => {
-    const pull = async () => { if (document.hidden) return; const r = await fetch("/api/live", { cache: "no-store" }).then((r) => r.json()).catch(() => null); if (r?.agents) setLive(r); };
+    const pull = async () => { if (document.hidden) return; const r = await fetch("/api/live", { cache: "no-store" }).then((r) => r.json()).catch(() => null); if (r?.agents && !r.empty) setLive(r); };
     void pull(); const t = setInterval(pull, 4000);
     return () => clearInterval(t);
   }, []);
@@ -63,9 +63,9 @@ export function LiveBoard({ initial, agent = "dez" }: { initial: Live; agent?: s
           {sel && <Follow agent={sel.id} />}
         </div>
         <div className="live-cols">
-          <Col title="Fresh launches" sub="on the curve" coins={order(live.coins.filter(FRESH))} lastBy={lastBy} holders={holders} />
-          <Col title="Final stretch" sub="25%+ of the curve" coins={order(live.coins.filter(STRETCH))} lastBy={lastBy} holders={holders} />
-          <Col title="Migrated" sub="trading in the pool" coins={order(live.coins.filter((c) => c.graduated))} lastBy={lastBy} holders={holders} />
+          <Col title="Fresh launches" sub="on the curve" empty="No fresh launch with a real pool right now." coins={order(live.coins.filter(FRESH))} lastBy={lastBy} holders={holders} />
+          <Col title="Final stretch" sub="25%+ of the curve" empty="No tracked coin is past 25% of its curve right now." coins={order(live.coins.filter(STRETCH))} lastBy={lastBy} holders={holders} />
+          <Col title="Migrated" sub="trading in the pool" empty="No migrated coin tracked right now." coins={order(live.coins.filter((c) => c.graduated))} lastBy={lastBy} holders={holders} />
           <div className="live-col">
             <h2 className="live-col-title">Stock desk <span>tokenized stocks</span></h2>
             <div className="live-col-body">
@@ -95,15 +95,15 @@ function Tag({ t }: { t: AgentTrade }) {
 }
 
 
-function Col({ title, sub, coins, lastBy, holders }: { title: string; sub: string; coins: LiveCoin[]; lastBy: Map<string, AgentTrade>; holders: (t: string) => { id: string }[] }) {
+function Col({ title, sub, empty, coins, lastBy, holders }: { title: string; sub: string; empty: string; coins: LiveCoin[]; lastBy: Map<string, AgentTrade>; holders: (t: string) => { id: string }[] }) {
   return (
     <div className="live-col">
       <h2 className="live-col-title">{title} <span>{sub}</span></h2>
       <div className="live-col-body">
-        {coins.length === 0 && <p className="live-empty">Nothing here right now.</p>}
-        {coins.map((c) => { const t = lastBy.get(c.token); const h = holders(c.token); return (
+        {coins.length === 0 && <p className="live-empty">{empty}</p>}
+        {coins.map((c, i) => { const t = lastBy.get(c.token); const h = holders(c.token); return (
           <a key={c.token} href={`https://pump.fun/coin/${c.token}`} target="_blank" rel="noreferrer" className={`coin-card ${t ? `is-${t.side}` : "is-idle"}`}>
-            <AssetLogo a={{ symbol: c.symbol, kind: "pump", token: c.token, logo: c.logo }} />
+            <AssetLogo a={{ symbol: c.symbol, kind: "pump", token: c.token, logo: c.logo }} eager={i < 5} />
             <div className="min-w-0 flex-1">
               <b>${c.symbol}</b><small className="truncate">{c.name}</small>
               <div className="coin-meta"><span>MC {usd(c.mcapUsd)}</span>{!c.graduated && <span className="coin-bar"><i style={{ width: `${Math.min(100, c.progress)}%` }} /></span>}{!c.graduated && <span>{c.progress.toFixed(0)}%</span>}</div>
