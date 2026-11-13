@@ -10,7 +10,8 @@ export function PriceTicker() {
   const row = [...prices, ...prices];
   return (
     <div className="edge-fade overflow-hidden border-y border-line bg-deck">
-      <div className="marquee flex w-max gap-6 py-2">
+      {/* constant reading speed (~45 px/s) whatever the number of assets */}
+      <div className="marquee flex w-max gap-6 py-2" style={{ animationDuration: `${prices.length * 5.5}s` }}>
         {row.map((p, i) => (
           <a key={i} href={p.kind === "pump" ? pumpUrl(p.token) : explorerToken(p.token)} target="_blank" rel="noreferrer" tabIndex={i >= prices.length ? -1 : undefined}
             className="flex items-center gap-2 whitespace-nowrap text-sm transition-colors hover:text-sun">
