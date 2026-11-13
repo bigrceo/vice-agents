@@ -149,15 +149,21 @@ async function think(a: Agent) {
   const near = others.filter((o) => o.district === me.district).map((o) => o.id);
   const heard = await sql`select agent_id, kind, text, to_agent from la_events where kind in ('say','trade') and at > now() - interval '15 minutes' order by id desc limit 8`;
   const opens = new Map((await sql`select symbol, open from la_prices`).map((r) => [r.symbol, r.open]));
+  // Each local works its own corner of the trenches: the coins it holds plus a personal draw (re-dealt every 10 minutes),
+  // so ten agents don't all see, and all ape, the same hottest coin. Crowding is shown so they can avoid it.
+  const held = new Set(pos.map((p) => p.symbol));
+  const crowd = new Map((await sql`select symbol, count(distinct agent_id)::int n from la_positions where qty > 0 group by symbol`).map((r) => [r.symbol, r.n as number]));
+  const slot = Math.floor(Date.now() / 600_000), rank = (sym: string) => [...`${a.id}:${slot}:${sym}`].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
+  const pumpView = new Set([...held, ...[...PX.values()].filter((x) => x.kind === "pump" && !held.has(x.symbol)).sort((x, y) => rank(x.symbol) - rank(y.symbol)).slice(0, 6).map((x) => x.symbol)]);
   const market = SECTORS.map((sec) => {
-    const rows = [...PX.values()].filter((x) => sectorOf(x.symbol, x.kind).id === sec.id);
-    return rows.length ? `${sec.name} (district ${sec.district}):\n` + rows.map((x) => `  ${x.symbol}${x.fresh ? " FRESH LAUNCH" : ""}${x.kind === "pump" ? ` mcap $${Math.round(x.mcapUsd / 1000)}k, pool ${x.liq.toFixed(1)} SOL${x.graduated ? "" : `, curve ${Math.round(x.progress ?? 0)}%`}` : " (xStock)"} ${fmt(x.price)} SOL, ${(((x.price / (opens.get(x.symbol) || x.price)) - 1) * 100).toFixed(1)}% since tracked`).join("\n") : "";
+    const rows = [...PX.values()].filter((x) => sectorOf(x.symbol, x.kind).id === sec.id && (x.kind !== "pump" || pumpView.has(x.symbol)));
+    return rows.length ? `${sec.name} (district ${sec.district}):\n` + rows.map((x) => `  ${x.symbol}${x.fresh ? " FRESH LAUNCH" : ""}${x.kind === "pump" ? ` mcap $${Math.round(x.mcapUsd / 1000)}k, pool ${x.liq.toFixed(1)} SOL${x.graduated ? "" : `, curve ${Math.round(x.progress ?? 0)}%`}` : " (xStock)"} ${fmt(x.price)} SOL, ${(((x.price / (opens.get(x.symbol) || x.price)) - 1) * 100).toFixed(1)}% since tracked${crowd.get(x.symbol) ? `, ${crowd.get(x.symbol)} locals already hold it` : ""}`).join("\n") : "";
   }).filter(Boolean).join("\n");
   const book = pos.map((p) => { const px = PX.get(p.symbol)?.price ?? 0; return `${p.symbol}: ${fmt(p.qty)} units, cost ${fmt(p.cost)} SOL, now ${fmt(p.qty * px)} SOL`; }).join("\n") || "nothing";
   const names = Object.fromEntries(CAST.map((c) => [c.id, c.name]));
   const system = `You are ${a.name}, ${a.role} in Leonida (a Florida-like state: Vice City, the Keys, swamps). ${a.persona}
 You live on a map and trade real tokenized stocks (xStocks) and pump.fun memecoins on Solana. The map is the market: ${SECTORS.map((x) => `${x.district} = ${x.name.toLowerCase()}`).join(", ")}. You walk to the district of what you trade.
-The trenches matter most: fresh pump.fun launches are where a sharp call gets noticed, but thin pools punish size. Style: ${a.style}. Favourite names: ${a.likes.join(", ")} (PUMP = any pump.fun memecoin).
+The trenches matter most: fresh pump.fun launches are where a sharp call gets noticed, but thin pools punish size. Style: ${a.style}. Favourite names: ${a.likes.join(", ")} (PUMP = any pump.fun memecoin). You only see your own corner of the trenches: find your own coins. Piling into what the other locals already hold is how bagholders are made.
 Stay in character, English, short and punchy, no hashtags, no emojis. Never mention being an AI. Never say GTA or Rockstar.
 Answer ONLY JSON: {"thought": "<inner thought, max 140 chars>", "say": {"to": "<agent id or null>", "text": "<line said out loud, max 140 chars>"} | null,
 "move_to": "<one of: ${[...new Set([...a.haunts, ...SECTORS.map((x) => x.district)])].join(", ")}> | null", "trade": {"side": "buy"|"sell", "symbol": "<symbol from the market list>", "pct": <1-60, % of cash for buys or % of position for sells>, "reason": "<why, in character, max 160 chars>"} | null}

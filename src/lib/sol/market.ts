@@ -84,9 +84,9 @@ export async function pumpCoins(sol: number): Promise<(Mkt & { fresh: boolean })
     jup<JupToken[]>(`/tokens/v2/recent?limit=100`).catch(() => [] as JupToken[]),
   ]);
   const pump = (t: JupToken) => /pump/i.test(t.launchpad ?? "") && (t.usdPrice ?? 0) > 0;
-  const top = trend.filter((t) => pump(t) && (t.liquidity ?? 0) > 15_000).slice(0, 6).map((t) => ({ ...toMkt(t, "pump", sol), fresh: false }));
+  const top = trend.filter((t) => pump(t) && (t.liquidity ?? 0) > 15_000).slice(0, 12).map((t) => ({ ...toMkt(t, "pump", sol), fresh: false }));
   const fresh = recent.filter((t) => pump(t) && !t.graduatedPool && (t.liquidity ?? 0) > 4_000 && !top.some((x) => x.mint === t.id))
-    .sort((a, b) => (b.mcap ?? 0) - (a.mcap ?? 0)).slice(0, 4).map((t) => ({ ...toMkt(t, "pump", sol), fresh: true }));
+    .sort((a, b) => (b.mcap ?? 0) - (a.mcap ?? 0)).slice(0, 8).map((t) => ({ ...toMkt(t, "pump", sol), fresh: true }));
   return uniq([...top, ...fresh]);
 }
 
