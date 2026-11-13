@@ -62,7 +62,11 @@ const warmed = new Set<string>();
 async function warmLogos() {
   const site = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://leonida-agents-sol.vercel.app";
   const rows = await sql`select distinct token from la_prices where kind = 'pump'`;
-  for (const { token } of rows) if (!warmed.has(token)) { warmed.add(token); await fetch(`${site}/api/img?mint=${token}`, { signal: AbortSignal.timeout(15_000) }).catch(() => {}); }
+  for (const { token } of rows) {
+    if (warmed.has(token)) continue;
+    const r = await fetch(`${site}/api/img?mint=${token}`, { signal: AbortSignal.timeout(15_000) }).catch(() => null);
+    if (r && (r.ok || r.status === 404)) warmed.add(token);   // a failed fetch is retried on the next refresh
+  }
 }
 
 async function refreshPrices() {
