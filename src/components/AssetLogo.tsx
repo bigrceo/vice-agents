@@ -19,6 +19,6 @@ export function AssetLogo({ a, size = 40, className = "", eager = false }: { a: 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img className={`asset-logo ${stock ? "is-stock" : ""} ${className}`} width={size} height={size} style={box} alt="" decoding="async"
-      loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : "auto"} referrerPolicy="no-referrer" src={logoSrc(a)} onError={() => setBad(true)} />
+      loading="eager" fetchPriority={eager ? "high" : "auto"} referrerPolicy="no-referrer" src={logoSrc(a)} onError={() => setBad(true)} />
   );
 }

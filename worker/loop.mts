@@ -57,6 +57,14 @@ let SOL_USD = 0;
 
 const toPx = (m: Mkt, fresh = false): Px => ({ symbol: m.symbol, kind: m.kind, token: m.mint, name: m.name, logo: m.logo, decimals: m.decimals, price: m.priceSol, mcapUsd: m.mcapUsd, liq: m.liqSol, fresh, graduated: m.graduated });
 
+/** Ask the site for every new coin's logo once: the proxy stores a thumbnail in la_logos, so visitors never wait on IPFS. */
+const warmed = new Set<string>();
+async function warmLogos() {
+  const site = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://leonida-agents-sol.vercel.app";
+  const rows = await sql`select distinct token from la_prices where kind = 'pump'`;
+  for (const { token } of rows) if (!warmed.has(token)) { warmed.add(token); await fetch(`${site}/api/img?mint=${token}`, { signal: AbortSignal.timeout(15_000) }).catch(() => {}); }
+}
+
 async function refreshPrices() {
   const sol = await solUsd(); if (!sol) return;
   SOL_USD = sol;
@@ -75,6 +83,7 @@ async function refreshPrices() {
   await sql`delete from la_prices where kind = 'pump' and updated_at < now() - interval '30 minutes' and symbol not in (select symbol from la_positions where qty > 0)`;
   await sql`insert into la_meta (k, v) values ('sol_usd', ${String(SOL_USD)}) on conflict (k) do update set v = excluded.v`;
   console.log(`prices: ${st.length} xstocks, ${p.length} pump.fun, SOL $${SOL_USD.toFixed(0)}`);
+  warmLogos().catch(() => {});
 }
 
 /** Where an agent goes next: mostly the district of something it holds (the map shows where the money sits), else one of its spots. */
